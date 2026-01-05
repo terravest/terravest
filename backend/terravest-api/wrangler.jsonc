@@ -1,0 +1,59 @@
+/**
+ * For more details on how to configure Wrangler, refer to:
+ * https://developers.cloudflare.com/workers/wrangler/configuration/
+ */
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "terravest-api",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-01-03",
+	"observability": {
+		"enabled": true
+	},
+	"d1_databases": [
+		{
+			"binding": "terravest_db",
+			"database_name": "terravest-db",
+			"database_id": "7bf5d2a9-1129-4c81-8650-309549e37885"
+		}
+	],
+	"vars": {
+		"JWT_SECRET": "super-secret-terravest-key"
+	},
+	/**
+     * ZAMANLANMIŞ GÖREVLER (CRON TRIGGERS)
+     * "0 9 1 * *" -> Her ayın 1'inde, saat 09:00'da çalışır.
+     */
+	"triggers": {
+		"crons": [
+			"0 9 1 * *"
+		]
+	}
+	/**
+     * Smart Placement
+     * https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
+     */
+	// "placement": {  "mode": "smart" }
+	/**
+     * Bindings
+     * Bindings allow your Worker to interact with resources on the Cloudflare Developer Platform, including
+     * databases, object storage, AI inference, real-time communication and more.
+     * https://developers.cloudflare.com/workers/runtime-apis/bindings/
+     */
+	/**
+     * Environment Variables
+     * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
+     * Note: Use secrets to store sensitive data.
+     * https://developers.cloudflare.com/workers/configuration/secrets/
+     */
+	/**
+     * Static Assets
+     * https://developers.cloudflare.com/workers/static-assets/binding/
+     */
+	// "assets": {  "directory": "./public/",  "binding": "ASSETS" }
+	/**
+     * Service Bindings (communicate between multiple Workers)
+     * https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings
+     */
+	// "services": [  {   "binding": "MY_SERVICE",   "service": "my-service"  } ]
+}

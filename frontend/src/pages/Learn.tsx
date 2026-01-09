@@ -1,34 +1,53 @@
 import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
-import { Search, FileKey, Zap, Bitcoin, HelpCircle, BookOpen, ArrowRight } from 'lucide-react'; // Coins yerine Bitcoin ikonu
+import { Search, FileKey, Zap, Bitcoin, HelpCircle, BookOpen, ArrowRight, Clock, Percent, ShieldCheck } from 'lucide-react';
 
 export default function Learn() {
 
-    // Süreç Adımları Verisi (BTC Güncellendi)
+    // Süreç Adımları Verisi
     const steps = [
         {
             icon: <Search size={32} />,
             title: "1. Curated Selection",
-            desc: "Our team scouts the U.S. market for high-yield opportunities, focusing on areas popular with international investors like Miami and Orlando. We do the hard work—inspections, appraisals, and legal checks—so you don't have to."
+            desc: "Our team scouts the U.S. market for high-yield opportunities, focusing on areas popular with international investors like Miami and Orlando. We do the hard work—inspections, appraisals, and legal checks."
         },
         {
             icon: <FileKey size={32} />,
             title: "2. The 'Digital Deed'",
-            desc: "Instead of buying a whole house, the property is placed into a U.S. Company (LLC). We then split the ownership into digital tokens. Think of it like buying a digital share of an apartment building rather than the whole thing."
+            desc: "Instead of buying a whole house, the property is placed into a U.S. Company (LLC). We then split the ownership into digital tokens. Think of it like buying a digital share of an apartment building."
         },
         {
             icon: <Zap size={32} />,
             title: "3. Instant Ownership",
-            desc: "You can purchase these tokens using Bitcoin (BTC). The moment the transaction clears on the blockchain, you are a legal co-owner. No international wire transfer fees, no waiting weeks for bank approvals."
+            desc: "You can purchase these tokens using your USD balance. The moment the transaction clears, you are a legal co-owner. No international wire transfer fees, no waiting weeks."
         },
         {
-            icon: <Bitcoin size={32} />, // İkon değişti
-            title: "4. Weekly Bitcoin Rent", // Başlık değişti
-            desc: "As tenants pay their rent in USD, we collect it, convert it, and distribute your share directly to your wallet in Bitcoin. You earn passive income in the world's most secure digital asset."
+            icon: <Bitcoin size={32} />,
+            title: "4. Monthly Income",
+            desc: "Rent is calculated daily based on your ownership. You can claim your accumulated earnings to your wallet anytime. Passive income in the world's most secure asset class."
         }
     ];
 
-    // Sözlük Verisi (USDC -> BTC)
+    // Ücret Yapısı Verisi (YENİ)
+    const fees = [
+        {
+            title: "Trading Fee",
+            rate: "1.5%",
+            desc: "Applied once when buying or selling property tokens. This covers legal documentation, blockchain gas fees, and platform operations."
+        },
+        {
+            title: "Property Management",
+            rate: "10%",
+            desc: "Deducted from the gross rental income before distribution. Covers tenant management, repairs, insurance, and property taxes."
+        },
+        {
+            title: "Withdrawal Fee",
+            rate: "$5 + 1%",
+            desc: "Applied only when moving funds from your TerraVest wallet to your external Bitcoin wallet to cover network transaction costs."
+        }
+    ];
+
+    // Sözlük Verisi
     const glossary = [
         {
             term: "BTC (Bitcoin)",
@@ -51,7 +70,7 @@ export default function Learn() {
             {/* --- HERO SECTION --- */}
             <section className="relative bg-[#0F172A] py-24 px-4 overflow-hidden">
                 <div className="absolute inset-0 z-0 opacity-10">
-                    <img src="https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80" className="w-full h-full object-cover" />
+                    <img src="https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80" className="w-full h-full object-cover" alt="Real Estate Background" />
                 </div>
 
                 <div className="container mx-auto max-w-4xl text-center relative z-10">
@@ -61,7 +80,7 @@ export default function Learn() {
                     <h1 className="text-4xl md:text-6xl font-extrabold text-white mb-6 leading-tight">
                         How to Buy U.S. Real Estate <br />
                         <span className="text-[#F7931A] italic font-serif">
-                            (Using Bitcoin)
+                            (Using Crypto)
                         </span>
                     </h1>
                     <p className="text-xl text-slate-300 mb-10 max-w-2xl mx-auto">
@@ -100,8 +119,67 @@ export default function Learn() {
                 </div>
             </section>
 
-            {/* --- GLOSSARY SECTION --- */}
+            {/* --- DAILY VESTING EXPLAINER --- */}
+            <section className="bg-[#0F172A] py-20 px-4">
+                <div className="container mx-auto max-w-3xl">
+                    <div className="bg-white/5 border border-white/10 rounded-2xl p-8 backdrop-blur-sm">
+                        <div className="flex items-start gap-4">
+                            <div className="bg-[#00E5FF]/20 p-3 rounded-lg text-[#00E5FF] shrink-0">
+                                <Clock size={32} />
+                            </div>
+                            <div>
+                                <h3 className="text-2xl font-bold text-white mb-3">Daily Vesting, Flexible Claims</h3>
+                                <p className="text-gray-300 leading-relaxed mb-6">
+                                    At TerraVest, fairness is our priority. Unlike traditional systems where you might miss a dividend by a day, our rental income is calculated
+                                    <span className="text-[#00E5FF] font-semibold"> daily</span> based on your exact ownership duration.
+                                </p>
+                                <ul className="space-y-4">
+                                    <li className="flex items-start gap-3 text-gray-400 text-sm">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-[#00E5FF] mt-2" />
+                                        <span>Rent accrues in your "Unclaimed" balance every night based on the shares you hold.</span>
+                                    </li>
+                                    <li className="flex items-start gap-3 text-gray-400 text-sm">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-[#00E5FF] mt-2" />
+                                        <span>You can click the <strong>Claim</strong> button anytime to move these earnings to your main wallet.</span>
+                                    </li>
+                                    <li className="flex items-start gap-3 text-gray-400 text-sm">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-[#00E5FF] mt-2" />
+                                        <span>If you sell a property mid-month, you still keep the rent earned for the specific days you held it. No "dividend capture" tricks—just fair pay.</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* --- FEE STRUCTURE (YENİ EKLENEN KISIM) --- */}
             <section className="py-20 bg-white">
+                <div className="container mx-auto px-4 max-w-5xl">
+                    <div className="text-center mb-12">
+                        <h2 className="text-3xl font-bold text-[#0F172A] mb-4">Transparent Fee Structure</h2>
+                        <p className="text-slate-500">No hidden costs. We believe in complete transparency to align our success with yours.</p>
+                    </div>
+
+                    <div className="grid md:grid-cols-3 gap-8">
+                        {fees.map((fee, index) => (
+                            <div key={index} className="bg-[#F9F7F3] rounded-2xl p-8 border border-slate-200 text-center hover:border-[#F7931A]/50 transition duration-300">
+                                <div className="bg-white w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm text-[#0F172A]">
+                                    {index === 1 ? <ShieldCheck size={24} /> : <Percent size={24} />}
+                                </div>
+                                <h3 className="text-lg font-bold text-[#0F172A] mb-2">{fee.title}</h3>
+                                <div className="text-3xl font-black text-[#009B9E] mb-4">{fee.rate}</div>
+                                <p className="text-sm text-slate-600 leading-relaxed">
+                                    {fee.desc}
+                                </p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
+            {/* --- GLOSSARY SECTION --- */}
+            <section className="py-20 bg-[#F9F7F3]">
                 <div className="container mx-auto px-4 max-w-4xl">
                     <div className="flex items-center gap-3 mb-8">
                         <BookOpen className="text-[#F7931A]" size={32} />
@@ -110,7 +188,7 @@ export default function Learn() {
 
                     <div className="grid md:grid-cols-3 gap-6">
                         {glossary.map((item, i) => (
-                            <div key={i} className="bg-[#F9F7F3] p-6 rounded-2xl border border-slate-200">
+                            <div key={i} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                                 <h4 className="font-bold text-[#0F172A] mb-2 text-lg">{item.term}</h4>
                                 <p className="text-slate-600 text-sm">{item.def}</p>
                             </div>
@@ -133,7 +211,7 @@ export default function Learn() {
                         },
                         {
                             q: "How does this protect me from inflation?",
-                            a: "Real estate historically appreciates in value. Additionally, by receiving payouts in Bitcoin, you hold an asset that is independent of any central bank's monetary policy, offering a potential hedge against fiat currency devaluation."
+                            a: "Real estate historically appreciates in value. Additionally, by receiving payouts in Bitcoin, you hold an asset that is independent of any central bank's monetary policy."
                         },
                         {
                             q: "What about U.S. Taxes?",
@@ -141,7 +219,7 @@ export default function Learn() {
                         },
                         {
                             q: "Is there a minimum investment?",
-                            a: "We believe financial freedom should be for everyone. You can start building your portfolio with as little as $50 worth of BTC."
+                            a: "We believe financial freedom should be for everyone. You can start building your portfolio with as little as $50."
                         }
                     ].map((faq, i) => (
                         <div key={i} className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm hover:border-[#F7931A]/50 transition cursor-default">

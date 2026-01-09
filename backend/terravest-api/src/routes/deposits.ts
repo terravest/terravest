@@ -1,45 +1,38 @@
 import { Env } from "../index";
-import { jwtVerify } from "jose";
+import { requireAuth } from "../middleware/auth";
 
-export async function handleDeposits(request: Request, env: Env): Promise<Response> {
-    if (request.method !== "POST") {
-        return new Response("Method not allowed", { status: 405 });
-    }
+export const handleDeposits = async (request: Request, env: Env) => {
+    const auth = await requireAuth(request, env);
+    if (auth instanceof Response) return auth;
+    const user = auth.user;
 
-    // 1. Token Kontrolü (Kim bu kullanıcı?)
-    const authHeader = request.headers.get("Authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-        return new Response(JSON.stringify({ error: "Token required" }), { status: 401 });
-    }
-    const token = authHeader.split(" ")[1];
+    if (request.method === "POST") {
+        try {
+            const { amount } = await request.json() as any;
+            if (!amount || amount < 10) return new Response(JSON.stringify({ error: "Minimum deposit is $10" }), { status: 400 });
 
-    try {
-        const secret = new TextEncoder().encode(env.JWT_SECRET);
-        const { payload } = await jwtVerify(token, secret);
-        const userId = payload.id; // Token'dan gerçek ID'yi alıyoruz!
+            const db = env.terravest_db;
 
-        const body = await request.json() as { amount: number; currency: string };
+            // Kendimize ait statik bir BTC adresi (Gerçekte her sipariş için yeni üretilir)
+            const paymentAddress = "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh";
 
-        if (!body.amount || body.amount <= 0) {
-            return new Response(JSON.stringify({ error: "Invalid amount" }), { status: 400 });
+            // 1. Siparişi Oluştur (Property ID yok, NULL olacak)
+            const { success, meta } = await db.prepare(`
+                INSERT INTO orders (user_id, property_id, amount, total_price, status, payment_address, created_at) 
+                VALUES (?, NULL, 0, ?, 'pending', ?, ?)
+            `).bind(user.id, amount, paymentAddress, new Date().toISOString()).run();
+
+            if (!success) throw new Error("Database insert failed");
+
+            // 2. Oluşan Siparişi Geri Döndür (ID'si ile birlikte)
+            const newOrder = await db.prepare("SELECT * FROM orders WHERE id = ?").bind(meta.last_row_id).first();
+
+            return new Response(JSON.stringify(newOrder), { status: 201 });
+
+        } catch (e: any) {
+            return new Response(JSON.stringify({ error: e.message }), { status: 500 });
         }
-
-        // 2. Veritabanına Gerçek Kullanıcı ID'si ile Kaydet
-        const result = await env.terravest_db.prepare(
-            "INSERT INTO deposits (user_id, amount, currency, status) VALUES (?, ?, ?, ?) RETURNING id"
-        ).bind(userId, body.amount, body.currency || 'TRY', 'Pending').first();
-
-        return new Response(JSON.stringify({
-            message: "Deposit request created",
-            id: result?.id,
-            userId: userId, // Kontrol için ID'yi de dönelim
-            status: "Pending"
-        }), {
-            status: 201,
-            headers: { "Content-Type": "application/json" }
-        });
-
-    } catch (e: any) {
-        return new Response(JSON.stringify({ error: e.message }), { status: 500 });
     }
-}
+
+    return new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405 });
+};

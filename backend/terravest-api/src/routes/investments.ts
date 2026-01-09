@@ -1,82 +1,77 @@
-import { requireAuth } from "../middleware/auth";
 import { Env } from "../index";
+import { requireAuth } from "../middleware/auth";
 
-// --------------------
-// PORTFOLIO & INVESTMENTS
-// --------------------
-
-// backend/terravest-api/src/routes/investments.ts
-
-// ... (imports)
-
-export async function handlePortfolio(request: Request, env: Env): Promise<Response> {
+export const handlePortfolio = async (request: Request, env: Env) => {
+    // 1. Yetki Kontrolü
     const auth = await requireAuth(request, env);
     if (auth instanceof Response) return auth;
-    const user = auth.user as any;
+    const user = auth.user;
+    const db = env.terravest_db;
 
     try {
-        // 1. Kullanıcının birikmiş kirasını çek (YENİ!)
-        const userRecord = await env.terravest_db.prepare(
-            "SELECT unclaimed_rewards FROM users WHERE id = ?"
-        ).bind(user.id).first();
-
-        const rewards = userRecord ? (userRecord.unclaimed_rewards as number) : 0;
-
-        // 2. Varlıkları çek
-        const { results: assets } = await env.terravest_db.prepare(`
+        // 2. Kullanıcının Yatırımlarını Çek (Mülk detaylarıyla birleştirerek)
+        // YENİ: i.unclaimed_rewards sütununu da çekiyoruz.
+        const { results: investments } = await db.prepare(`
             SELECT 
-                th.token_amount as investedAmount,
-                th.created_at as date,
-                th.property_id,
-                p.id as id, 
+                i.id,
+                i.property_id,
+                i.amount as token_count, 
+                i.unclaimed_rewards,
                 p.title as propertyName,
-                p.price_usd,
-                p.total_tokens
-            FROM token_holdings th
-            JOIN properties p ON th.property_id = p.id
-            WHERE th.user_id = ?
+                p.price_per_token,
+                p.total_tokens,
+                p.price as total_property_value
+            FROM investments i
+            JOIN properties p ON i.property_id = p.id
+            WHERE i.user_id = ?
         `).bind(user.id).all();
 
-        // 3. Siparişleri çek
-        const { results: orders } = await env.terravest_db.prepare(`
-            SELECT 
-                o.id,
-                o.total_price_usd,
-                o.payment_status,
-                o.created_at,
-                p.title as propertyName
-            FROM orders o
-            JOIN properties p ON o.property_id = p.id
-            WHERE o.user_id = ?
-            ORDER BY o.created_at DESC
+        // 3. Geçmiş Siparişleri ve İşlemleri Çek
+        // Dashboard'daki "Recent Activity" tablosu için gerekli.
+        const { results: orders } = await db.prepare(`
+            SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC
         `).bind(user.id).all();
 
-        const totalInvested = assets.reduce((acc: number, curr: any) => acc + (curr.investedAmount * (curr.price_usd / curr.total_tokens) || 0), 0);
+        // 4. Veriyi Dashboard'un beklediği formata çevir
+        let totalInvested = 0;
+        let totalUnclaimed = 0;
 
-        return json({
+        const assets = investments.map((inv: any) => {
+            // Hesaplamalar
+            const currentValue = inv.token_count * inv.price_per_token;
+            totalInvested += currentValue;
+            totalUnclaimed += (inv.unclaimed_rewards || 0);
+
+            return {
+                id: inv.id,
+                property_id: inv.property_id,
+                propertyName: inv.propertyName,
+                investedAmount: inv.token_count, // Frontend'de 'investedAmount' token adedi olarak kullanılıyor
+                price_usd: inv.total_property_value,
+                total_tokens: inv.total_tokens,
+                current_price: inv.price_per_token,
+                unclaimed_rewards: inv.unclaimed_rewards || 0
+            };
+        });
+
+        // 5. Yanıt Dön
+        return new Response(JSON.stringify({
             summary: {
                 totalInvested,
-                unclaimedRewards: rewards, // <-- Frontend'e gönderiyoruz
-                netWorth: totalInvested + rewards
+                unclaimedRewards: totalUnclaimed
             },
-            assets: assets || [],
-            orders: orders || []
+            assets: assets,
+            orders: orders
+        }), {
+            status: 200,
+            headers: {
+                "Content-Type": "application/json",
+                "Access-Control-Allow-Origin": "*"
+            }
         });
 
     } catch (e: any) {
-        return json({ error: e.message }, 500);
+        console.error("Portfolio Error:", e.message); // Loglara hatayı basar
+        return new Response(JSON.stringify({ error: e.message }), { status: 500 });
     }
-}
-
-
-
-// Helper
-function json(data: any, status = 200): Response {
-    return new Response(JSON.stringify(data), {
-        status,
-        headers: {
-            "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*"
-        },
-    });
-}
+};

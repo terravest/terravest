@@ -1,63 +1,62 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
+import { AuthProvider } from './context/AuthContext';
+
+// COMPONENTS
+import AdminRoute from './components/AdminRoute';
+// import Navbar from './components/Navbar'; // Optional global navbar
+
+// PAGES (General)
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import Dashboard from './pages/Dashboard';
-import Marketplace from './pages/Marketplace';
-import Admin from './pages/Admin';
-import PropertyDetails from './pages/PropertyDetails'; // Dosya isminin de 'PropertyDetails.tsx' olduğundan emin ol!
-import About from './pages/About';
-import Learn from './pages/Learn';
-import { useAuth } from './context/AuthContext';
+import Settings from './pages/Settings';
+import Dashboard from './pages/Dashboard'; // ✅ IMPORTED DASHBOARD
+import Marketplace from './pages/Marketplace'; // ✅ IMPORTED MARKETPLACE
 
-// PrivateRoute: Giriş yapmamış kullanıcıları Login sayfasına atar
-function PrivateRoute({ children }: { children: JSX.Element }) {
-  const { isAuthenticated } = useAuth();
-  return isAuthenticated ? children : <Navigate to="/login" />;
-}
+// PAGES (Admin)
+import Admin from './pages/admin/Admin';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminDeposits from './pages/admin/AdminDeposits';
+
+// ⚠️ If AdminProperties exists, uncomment the line below
+// import AdminProperties from './pages/admin/AdminProperties';
 
 function App() {
-  // BURADAKİ 'return' ÇOK ÖNEMLİ! 👇
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* --- HERKESE AÇIK SAYFALAR (PUBLIC) --- */}
-        <Route path="/" element={<Home />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/about" element={<About />} />
-        <Route path="/learn" element={<Learn />} />
+    <AuthProvider>
+      <Router>
+        {/* Notification Toasts */}
+        <Toaster position="top-right" />
 
-        {/* Mülk Detay Sayfası */}
-        <Route path="/properties/:id" element={<PropertyDetails />} />
+        <Routes>
+          {/* --- PUBLIC / USER ROUTES --- */}
+          <Route path="/" element={<Home />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
 
-        {/* --- SADECE ÜYELERE AÇIK SAYFALAR (PRIVATE) --- */}
-        <Route
-          path="/dashboard"
-          element={
-            <PrivateRoute>
-              <Dashboard />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/marketplace"
-          element={
-            <PrivateRoute>
-              <Marketplace />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/admin"
-          element={
-            <PrivateRoute>
-              <Admin />
-            </PrivateRoute>
-          }
-        />
-      </Routes>
-    </BrowserRouter>
+          {/* ✅ USER DASHBOARD ROUTE (This was missing!) */}
+          <Route path="/dashboard" element={<Dashboard />} />
+
+          {/* ✅ SETTINGS & MARKETPLACE */}
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/marketplace" element={<Marketplace />} />
+
+          {/* --- PROTECTED ADMIN ROUTES --- */}
+          <Route element={<AdminRoute />}>
+            <Route path="/admin" element={<Admin />} />
+            <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/admin/deposits" element={<AdminDeposits />} />
+
+            {/* ⚠️ If AdminProperties exists, uncomment the line below */}
+            {/* <Route path="/admin/properties" element={<AdminProperties />} /> */}
+          </Route>
+
+          {/* --- 404 (Not Found) --- */}
+          <Route path="*" element={<div className="p-10 text-center text-slate-500">404 - Page Not Found</div>} />
+        </Routes>
+      </Router>
+    </AuthProvider>
   );
 }
 

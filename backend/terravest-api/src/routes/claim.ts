@@ -1,63 +1,67 @@
-import { requireAuth } from "../middleware/auth";
 import { Env } from "../index";
+import { requireAuth } from "../middleware/auth";
 
 export async function handleClaim(request: Request, env: Env): Promise<Response> {
+    // 1. Auth Check
     const auth = await requireAuth(request, env);
     if (auth instanceof Response) return auth;
-    const user = auth.user as any;
+    const user = auth.user;
 
     if (request.method !== "POST") {
-        return json({ error: "Method not allowed" }, 405);
+        return new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405 });
     }
 
     try {
-        const body = await request.json() as { btc_address: string };
-        const { btc_address } = body;
+        const db = env.terravest_db;
 
-        if (!btc_address || btc_address.length < 10) {
-            return json({ error: "Valid BTC address is required" }, 400);
-        }
-
-        // 1. Kullanıcının Birikmiş Parasını Kontrol Et
-        const userRecord = await env.terravest_db.prepare(
-            "SELECT unclaimed_rewards FROM users WHERE id = ?"
+        // 2. Calculate Total Accrued Rewards
+        // We sum up 'unclaimed_rewards' from all investments belonging to the user.
+        const result = await db.prepare(
+            "SELECT SUM(unclaimed_rewards) as total FROM investments WHERE user_id = ?"
         ).bind(user.id).first();
 
-        const amount = userRecord ? (userRecord.unclaimed_rewards as number) : 0;
+        const totalClaimable = result?.total as number || 0;
 
-        if (amount <= 0) {
-            return json({ error: "No rewards to claim" }, 400);
+        // Threshold check: Prevent claiming insignificant amounts (e.g., less than 1 cent)
+        if (totalClaimable < 0.01) {
+            return new Response(JSON.stringify({ error: "No significant rewards to claim yet." }), { status: 400 });
         }
 
-        // --- İŞLEM (TRANSACTION) ---
+        // 3. ATOMIC TRANSACTION (Batch Execution)
+        const queries = [];
 
-        // A. Kullanıcının Bakiyesini Sıfırla
-        await env.terravest_db.prepare(
-            "UPDATE users SET unclaimed_rewards = 0 WHERE id = ?"
-        ).bind(user.id).run();
+        // A) Credit User Wallet Balance (USD)
+        queries.push(
+            db.prepare("UPDATE users SET usd_balance = usd_balance + ? WHERE id = ?")
+                .bind(totalClaimable, user.id)
+        );
 
-        // B. Satış İstekleri Tablosuna Kayıt Aç
-        // property_id = NULL (Çünkü bu mülk satışı değil, nakit çekimi)
-        // token_amount = 0
-        await env.terravest_db.prepare(
-            `INSERT INTO sell_requests (user_id, property_id, token_amount, total_value_usd, payment_details, status) 
-             VALUES (?, NULL, 0, ?, ?, 'pending')`
-        ).bind(user.id, amount, `REWARD CLAIM - BTC: ${btc_address}`).run();
+        // B) Reset 'unclaimed_rewards' to 0 for all user's investments
+        queries.push(
+            db.prepare("UPDATE investments SET unclaimed_rewards = 0 WHERE user_id = ?")
+                .bind(user.id)
+        );
 
-        return json({
+        // C) Create Ledger Entry (Transaction History)
+        queries.push(
+            db.prepare("INSERT INTO transactions (user_id, type, amount, description, created_at) VALUES (?, 'rent_claim', ?, 'Daily rent rewards claimed', ?)")
+                .bind(user.id, totalClaimable, new Date().toISOString())
+        );
+
+        // Execute all queries at once
+        await db.batch(queries);
+
+        return new Response(JSON.stringify({
             success: true,
-            message: "Claim request submitted. Funds will be sent to your BTC address.",
-            amount_claimed: amount
+            message: "Rewards successfully claimed and moved to your wallet balance.",
+            amount_claimed: totalClaimable,
+            target: "USD Balance"
+        }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" }
         });
 
     } catch (e: any) {
-        return json({ error: e.message }, 500);
+        return new Response(JSON.stringify({ error: e.message }), { status: 500 });
     }
-}
-
-function json(data: any, status = 200): Response {
-    return new Response(JSON.stringify(data), {
-        status,
-        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-    });
 }

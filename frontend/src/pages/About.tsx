@@ -1,10 +1,10 @@
 import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
-import { ShieldCheck, Bitcoin, MapPin, Globe, ArrowRight, Building2 } from 'lucide-react'; // Banknote yerine Bitcoin
+import { ShieldCheck, Bitcoin, MapPin, Globe, ArrowRight, Building2 } from 'lucide-react';
 
 export default function About() {
     return (
-        <div className="min-h-screen bg-[#F9F7F3] font-sans">
+        <div className="min-h-screen bg-[#F9F7F3] font-sans pb-20">
             <Navbar />
 
             {/* --- HERO SECTION --- */}
@@ -99,7 +99,7 @@ export default function About() {
                             </p>
                         </div>
 
-                        {/* Feature 2 - BTC GÜNCELLENDİ */}
+                        {/* Feature 2 */}
                         <div className="bg-[#F9F7F3] p-8 rounded-2xl border border-slate-100 hover:shadow-lg transition duration-300">
                             <div className="bg-orange-100 w-14 h-14 rounded-xl flex items-center justify-center mb-6 text-orange-600">
                                 <Bitcoin size={32} />

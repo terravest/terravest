@@ -1,52 +1,48 @@
 import { Env } from "./index";
 
+// MANAGEMENT FEE RATE (10%)
+// This rate is deducted from gross rent for platform maintenance, taxes, and operational expenses.
+const MANAGEMENT_FEE_RATE = 0.10;
+
 export async function distributeRent(env: Env) {
-    console.log("🔄 Starting Monthly Rent Distribution...");
+    const db = env.terravest_db;
+    const today = new Date().toISOString();
 
-    try {
-        // 1. Kira getirisi olan Aktif Mülkleri Bul
-        const { results: properties } = await env.terravest_db.prepare(
-            "SELECT * FROM properties WHERE status = 'active' AND monthly_yield > 0"
-        ).all();
+    console.log(`🔄 Daily Rent Calculation Started: ${today}`);
 
-        if (!properties || properties.length === 0) {
-            console.log("No active properties with yield found.");
-            return;
-        }
+    // 1. Fetch all active properties
+    const { results: properties } = await db.prepare("SELECT * FROM properties").all();
 
-        // 2. Her mülk için döngüye gir
-        for (const prop of properties) {
-            const propId = prop.id;
-            const rentAmount = prop.monthly_yield as number;
-            const totalTokens = prop.total_tokens as number;
+    for (const propResult of properties) {
+        const prop = propResult as any;
 
-            // Token başına düşen kira (Örn: $5000 kira / 10000 token = $0.5 hisse başı)
-            const dividendPerToken = rentAmount / totalTokens;
+        // A) ANNUAL NET INCOME FORMULA (BASED ON 365 DAYS)
+        // Formula: (Property Price * Annual Yield)
+        const annualYield = prop.rental_yield || 6; // Default 6%
+        const annualGrossRent = prop.price * (annualYield / 100);
 
-            // 3. Bu mülkün hissedarlarını bul
-            const { results: holders } = await env.terravest_db.prepare(
-                "SELECT user_id, token_amount FROM token_holdings WHERE property_id = ?"
-            ).bind(propId).all();
+        // B) MANAGEMENT FEE DEDUCTION (10%)
+        // Platform revenue is separated here.
+        const managementFee = annualGrossRent * MANAGEMENT_FEE_RATE;
+        const annualNetRent = annualGrossRent - managementFee;
 
-            if (!holders || holders.length === 0) continue;
+        // C) DAILY NET RENT PER SHARE
+        // If total tokens are not in DB, default to 1000.
+        const totalShares = prop.total_tokens || 1000;
 
-            // 4. Her hissedara payını dağıt
-            for (const holder of holders) {
-                const share = (holder.token_amount as number) * dividendPerToken;
+        // Daily Rent Per Share = (Annual Net Rent / Total Shares) / 365 Days
+        const dailyRentPerShare = (annualNetRent / totalShares) / 365;
 
-                if (share > 0) {
-                    // Kullanıcının 'unclaimed_rewards' bakiyesine ekle
-                    await env.terravest_db.prepare(
-                        "UPDATE users SET unclaimed_rewards = unclaimed_rewards + ? WHERE id = ?"
-                    ).bind(share, holder.user_id).run();
-                }
-            }
-            console.log(`✅ Distributed $${rentAmount} for property: ${prop.title}`);
-        }
-
-        console.log("🎉 Rent distribution completed successfully.");
-
-    } catch (error) {
-        console.error("❌ Error distributing rent:", error);
+        // D) UPDATE INVESTORS (BATCH SQL)
+        // Instead of updating one by one in a loop, we update all investments for that property in a single query.
+        // unclaimed_rewards = Current + (User's Share Amount * Daily Rent Per Share)
+        await db.prepare(`
+            UPDATE investments 
+            SET unclaimed_rewards = unclaimed_rewards + (amount * ?),
+                last_rent_calc_date = ?
+            WHERE property_id = ?
+        `).bind(dailyRentPerShare, today, prop.id).run();
     }
+
+    console.log("✅ Daily rent accrual completed. (Users can withdraw via 'Claim' button)");
 }

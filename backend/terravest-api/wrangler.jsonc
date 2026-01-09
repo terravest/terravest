@@ -7,6 +7,9 @@
 	"name": "terravest-api",
 	"main": "src/index.ts",
 	"compatibility_date": "2026-01-03",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
 	"observability": {
 		"enabled": true
 	},
@@ -18,15 +21,15 @@
 		}
 	],
 	"vars": {
-		"JWT_SECRET": "super-secret-terravest-key"
+		"JWT_SECRET": "ER100lenfe!"
 	},
 	/**
      * ZAMANLANMIŞ GÖREVLER (CRON TRIGGERS)
-     * "0 9 1 * *" -> Her ayın 1'inde, saat 09:00'da çalışır.
+     * "* * * * *" -> Her dakika çalışır (Ödeme kontrolü için)
      */
 	"triggers": {
 		"crons": [
-			"0 9 1 * *"
+			"* * * * *"
 		]
 	}
 	/**

@@ -32,8 +32,10 @@ CREATE TABLE IF NOT EXISTS properties (
     token_price REAL,
     total_tokens INTEGER,
     available_tokens INTEGER,
-    rental_yield REAL,
+    rental_yield TEXT,  -- Changed from REAL to TEXT to support string values like "6-20%", "~12%"
     image_url TEXT,
+    monthly_yield REAL,  -- Kept for backward compatibility (can be removed in future)
+    status TEXT DEFAULT 'active',
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 

@@ -13,11 +13,13 @@ import Register from './pages/Register';
 import Settings from './pages/Settings';
 import Dashboard from './pages/Dashboard';
 import Marketplace from './pages/Marketplace';
+import PropertyDetails from './pages/PropertyDetails';
 
 // PAGES (Admin)
 // import Admin from './pages/admin/Admin'; // Eğer Admin.tsx layout değilse gerek yok
 import AdminDashboard from './pages/admin/AdminDashboard'; // Depositler burada
 import AdminWithdrawals from './pages/admin/AdminWithdrawals'; // Çekimler burada
+import Properties from './pages/admin/Properties'; // Property yönetimi
 
 // ❌ SİLİNDİ: import AdminDeposits from './pages/admin/AdminDeposits'; 
 
@@ -40,6 +42,7 @@ function App() {
           {/* SETTINGS & MARKETPLACE */}
           <Route path="/settings" element={<Settings />} />
           <Route path="/marketplace" element={<Marketplace />} />
+          <Route path="/properties/:id" element={<PropertyDetails />} />
 
           {/* --- PROTECTED ADMIN ROUTES --- */}
           <Route element={<AdminRoute />}>
@@ -52,6 +55,9 @@ function App() {
             {/* 2. Para Çekme (Withdrawal) Yönetimi */}
             {/* Düzeltme: Başına /admin eklendi */}
             <Route path="/admin/withdrawals" element={<AdminWithdrawals />} />
+
+            {/* 3. Property Yönetimi */}
+            <Route path="/admin/properties" element={<Properties />} />
 
           </Route>
 

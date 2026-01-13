@@ -77,4 +77,35 @@ export const api = {
     getAdminWithdrawals: () => request("/admin/withdrawals", { method: "GET" }),
     approveWithdraw: (withdrawId: number, txHash: string) =>
         request("/admin/approve-withdraw", { method: "POST", body: JSON.stringify({ withdrawId, txHash }) }),
+
+    // ============================
+    // 🏠 PROPERTY MANAGEMENT (ADMIN)
+    // ============================
+    createProperty: (data: any) =>
+        request("/properties", { method: "POST", body: JSON.stringify(data) }),
+    updateProperty: (id: number, data: any) =>
+        request(`/properties/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+    deleteProperty: (id: number) =>
+        request("/properties", { method: "DELETE", body: JSON.stringify({ id }) }),
+    
+    // Resim yükleme (form-data)
+    uploadImage: async (file: File) => {
+        const token = localStorage.getItem("token");
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const response = await fetch(`${API_URL}/upload`, {
+            method: "POST",
+            headers: {
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            body: formData,
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || "Upload failed");
+        }
+        return data;
+    },
 };

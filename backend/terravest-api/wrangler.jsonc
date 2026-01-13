@@ -13,8 +13,9 @@
 		{
 			"binding": "terravest_db",
 			"database_name": "terravest-db",
-			"database_id": "7bf5d2a9-1129-4c81-8650-309549e37885"
-		}
+			"database_id": "c18f2c05-572c-465f-9b91-7d11d3928e70"
+		},
+
 	],
 	// Scheduled tasks:
 	// */10 * * * * -> Payment check every 10 minutes
@@ -29,7 +30,8 @@
 	"r2_buckets": [
 		{
 			"binding": "TERRAVEST_BUCKET", // Kod içindeki Env interface'i ile aynı olmalı
-			"bucket_name": "terravest-images"
+			"bucket_name": "terravest-images",
+			"preview_bucket_name": "terravest-images"
 		}
 	]
 }

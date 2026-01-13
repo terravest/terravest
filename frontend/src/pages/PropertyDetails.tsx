@@ -109,7 +109,12 @@ export default function PropertyDetails() {
                         <div className="flex items-center gap-2 bg-slate-50 px-4 py-2 rounded-lg border border-slate-100">
                             <span className="text-slate-400 text-xs font-bold uppercase">Est. Yield</span>
                             <span className="text-xl font-bold text-[#009B9E] flex items-center gap-1">
-                                <TrendingUp size={18} /> {prop.rental_yield || 0}%
+                                <TrendingUp size={18} />{' '}
+                                {prop.rental_yield ? (
+                                    prop.rental_yield.includes('%') 
+                                        ? prop.rental_yield
+                                        : `${prop.rental_yield}%`
+                                ) : 'N/A'}
                             </span>
                         </div>
                     </div>
@@ -161,7 +166,7 @@ export default function PropertyDetails() {
                             <h4 className="font-bold text-[#0F172A] mb-4 text-sm uppercase tracking-wide">Property Highlights</h4>
                             <ul className="grid md:grid-cols-2 gap-4 text-sm text-slate-600">
                                 <li className="flex gap-2.5 items-start"><CheckCircle size={18} className="text-[#009B9E] shrink-0 mt-0.5" /> Fully Managed Property</li>
-                                <li className="flex gap-2.5 items-start"><CheckCircle size={18} className="text-[#009B9E] shrink-0 mt-0.5" /> Weekly Rent Payouts</li>
+                                <li className="flex gap-2.5 items-start"><CheckCircle size={18} className="text-[#009B9E] shrink-0 mt-0.5" /> Monthly Rent Payouts</li>
                                 <li className="flex gap-2.5 items-start"><CheckCircle size={18} className="text-[#009B9E] shrink-0 mt-0.5" /> High Appreciation Potential</li>
                                 <li className="flex gap-2.5 items-start"><CheckCircle size={18} className="text-[#009B9E] shrink-0 mt-0.5" /> Legal Ownership via LLC</li>
                             </ul>
@@ -174,7 +179,7 @@ export default function PropertyDetails() {
                     <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100 sticky top-28">
                         <div className="mb-6">
                             <h3 className="text-xl font-bold text-[#0F172A]">Invest in this Asset</h3>
-                            <p className="text-slate-500 text-xs mt-1">Instant ownership via RealT Tokens</p>
+                            <p className="text-slate-500 text-xs mt-1">Instant ownership via TerraVest Tokens</p>
                         </div>
 
                         <div className="bg-slate-50 p-4 rounded-xl mb-6 border border-slate-100">

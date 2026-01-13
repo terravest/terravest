@@ -36,7 +36,7 @@ export default function Home() {
                     </h1>
 
                     <p className="text-xl text-slate-400 mb-10 max-w-2xl mx-auto leading-relaxed">
-                        Join the future of investment. Own fractional shares of high-yield rental properties on the blockchain. Receive weekly rent directly to your wallet.
+                        Join the future of investment. Own fractional shares of high-yield rental properties on the blockchain. Receive monthly rent directly to your wallet.
                     </p>
 
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -100,7 +100,7 @@ export default function Home() {
                             <div className="bg-blue-100 w-14 h-14 rounded-2xl flex items-center justify-center mb-6 text-blue-600 group-hover:scale-110 transition">
                                 <Wallet size={28} />
                             </div>
-                            <h3 className="text-xl font-bold text-[#0F172A] mb-3">Weekly Rent Payouts</h3>
+                            <h3 className="text-xl font-bold text-[#0F172A] mb-3">Monthly Rent Payouts</h3>
                             <p className="text-slate-600 leading-relaxed">
                                 Don't wait for monthly checks. Rental income is distributed automatically to your digital wallet every week via smart contracts.
                             </p>

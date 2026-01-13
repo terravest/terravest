@@ -29,6 +29,9 @@ export default function Navbar() {
     // Dropdown durumu
     const [accountOpen, setAccountOpen] = useState(false);
 
+    // Admin Kontrolü (Role veya ID'ye göre)
+    const isAdmin = user && ((user as any).role === 'admin' || (user as any).is_admin === 1);
+
     useEffect(() => {
         // User check log
     }, [user]);
@@ -92,14 +95,19 @@ export default function Navbar() {
                                         <div className="p-2 space-y-1">
                                             <div className="px-4 py-3 border-b border-slate-700 mb-1">
                                                 <p className="text-xs text-slate-400 uppercase font-bold">Signed in as</p>
-                                                <p className="text-sm font-bold text-white truncate">{user.email || user.username}</p>
+                                                <p className="text-sm font-bold text-white truncate">{user.email || (user as any).username}</p>
                                             </div>
 
                                             <Link to="/dashboard" className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-slate-300 hover:bg-white/5 hover:text-[#009B9E] rounded-lg transition-colors">
                                                 <LayoutDashboard size={16} /> Dashboard
                                             </Link>
 
-                                            {/* ❌ PROFILE LINKI BURADAN SILINDI */}
+                                            {/* --- ADMIN LINK (SADECE ADMINLERE) --- */}
+                                            {isAdmin && (
+                                                <Link to="/admin/properties" className="flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-purple-400 hover:bg-purple-500/10 hover:text-purple-300 rounded-lg transition-colors">
+                                                    <ShieldCheck size={16} /> Admin Panel
+                                                </Link>
+                                            )}
 
                                             <Link to="/settings" className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-slate-300 hover:bg-white/5 hover:text-[#009B9E] rounded-lg transition-colors">
                                                 <Settings size={16} /> Settings
@@ -125,7 +133,7 @@ export default function Navbar() {
                                             <span className="text-[10px] text-slate-400 font-bold uppercase">Balance</span>
                                             <div className="flex items-center gap-1.5">
                                                 <span className="font-bold text-sm text-[#009B9E] tracking-wide">
-                                                    ${user.usd_balance?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'}
+                                                    ${(user as any).usd_balance?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'}
                                                 </span>
                                                 <button
                                                     onClick={handleManualRefresh}
@@ -146,12 +154,6 @@ export default function Navbar() {
                                         </button>
                                     </div>
                                 </div>
-
-                                {(user as any).id === 1 && (
-                                    <Link to="/admin" className="text-orange-400 hover:text-orange-300 transition" title="Admin Panel">
-                                        <ShieldCheck size={20} />
-                                    </Link>
-                                )}
 
                                 <button onClick={handleLogout} className="text-slate-400 hover:text-red-400 transition" title="Log Out">
                                     <LogOut size={20} />
@@ -194,8 +196,6 @@ export default function Navbar() {
                                         <LayoutDashboard size={18} /> Dashboard
                                     </Link>
 
-                                    {/* ❌ PROFILE LINKI BURADAN DA SILINDI */}
-
                                     <Link to="/settings" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3 bg-white/5 rounded-xl font-bold text-slate-200">
                                         <Settings size={18} /> Settings
                                     </Link>
@@ -205,7 +205,7 @@ export default function Navbar() {
                                     <div>
                                         <p className="text-xs text-slate-400 font-bold uppercase">Wallet Balance</p>
                                         <p className="text-2xl font-bold text-[#009B9E]">
-                                            ${user.usd_balance?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'}
+                                            ${(user as any).usd_balance?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'}
                                         </p>
                                     </div>
                                     <button
@@ -217,8 +217,8 @@ export default function Navbar() {
                                     </button>
                                 </div>
 
-                                {(user as any).id === 1 && (
-                                    <Link to="/admin" onClick={() => setMobileMenuOpen(false)} className="flex items-center justify-center gap-2 bg-orange-500/10 text-orange-400 w-full py-3 rounded-xl font-bold border border-orange-500/20">
+                                {isAdmin && (
+                                    <Link to="/admin/properties" onClick={() => setMobileMenuOpen(false)} className="flex items-center justify-center gap-2 bg-purple-500/10 text-purple-400 w-full py-3 rounded-xl font-bold border border-purple-500/20">
                                         <ShieldCheck size={18} /> Admin Panel
                                     </Link>
                                 )}

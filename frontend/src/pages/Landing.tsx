@@ -67,7 +67,7 @@ export default function Landing() {
                     <div className="text-center mb-16">
                         <h2 className="text-3xl font-bold text-[#0F172A] mb-4">Latest Investment Opportunities</h2>
                         <p className="text-slate-600 max-w-2xl mx-auto">
-                            Diversify your portfolio with premium Miami real estate assets. Start earning weekly rental income today.
+                            Diversify your portfolio with premium Miami real estate assets. Start earning monthly rental income today.
                         </p>
                     </div>
 
@@ -124,8 +124,8 @@ export default function Landing() {
                                     <TrendingUp />
                                 </div>
                                 <div>
-                                    <h4 className="font-bold text-xl mb-2 text-[#0F172A]">Weekly Rental Income</h4>
-                                    <p className="text-slate-600">Receive your share of the rent every week, directly to your digital wallet.</p>
+                                    <h4 className="font-bold text-xl mb-2 text-[#0F172A]">Monthly Rental Income</h4>
+                                    <p className="text-slate-600">Receive your share of the rent every month, directly to your digital wallet.</p>
                                 </div>
                             </div>
                             <div className="flex gap-4">

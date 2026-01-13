@@ -1,40 +1,80 @@
 import { requireAuth } from "../lib/auth";
 import { Env } from "../index";
-import { json, errorResponse } from "../lib/errors";
+
+// Tarayıcının erişimine izin veren başlıklar
+const corsHeaders = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
 
 export async function handleUpload(request: Request, env: Env): Promise<Response> {
-    // 1. Sadece Adminler yükleyebilir (Auth kontrolü)
-    const auth = await requireAuth(request, env);
-    if (auth instanceof Response) return auth;
+    // 1. PREFLIGHT (OPTIONS) İSTEĞİNİ YÖNET
+    // Tarayıcı "Dosya gönderebilir miyim?" diye sorar, buna "Evet" demeliyiz.
+    if (request.method === "OPTIONS") {
+        return new Response(null, {
+            headers: corsHeaders
+        });
+    }
 
-    if (request.method !== "POST") return errorResponse("Method not allowed", 405);
+    // 2. Sadece POST isteğine izin ver
+    if (request.method !== "POST") {
+        return new Response(JSON.stringify({ error: "Method not allowed" }), {
+            status: 405,
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+    }
 
     try {
-        // 2. Dosyayı form-data olarak al
+        // 3. Auth Kontrolü
+        const auth = await requireAuth(request, env);
+        if (auth instanceof Response) {
+            // Auth hatası dönerse bile CORS başlıklarını ekleyerek döndürmeliyiz
+            // Yoksa tarayıcı yine "Failed to fetch" der.
+            return new Response(auth.body, {
+                status: auth.status,
+                headers: { 
+                    ...corsHeaders, 
+                    "Content-Type": "application/json" 
+                }
+            });
+        }
+
+        // 4. Dosyayı al
         const formData = await request.formData();
         const file = formData.get("file") as File;
 
-        if (!file) return errorResponse("No file uploaded", 400);
+        if (!file) {
+            return new Response(JSON.stringify({ error: "No file uploaded" }), {
+                status: 400,
+                headers: { ...corsHeaders, "Content-Type": "application/json" }
+            });
+        }
 
-        // 3. Dosyaya benzersiz bir isim ver (çakışmasın diye)
-        const fileExtension = file.name.split('.').pop();
+        // 5. Dosya ismini oluştur
+        const fileExtension = file.name.split('.').pop() || 'jpg';
         const fileName = `property-${crypto.randomUUID()}.${fileExtension}`;
 
-        // 4. R2 Bucket'a kaydet
+        // 6. R2 Bucket'a yükle
         await env.TERRAVEST_BUCKET.put(fileName, file.stream(), {
             httpMetadata: { contentType: file.type }
         });
 
-        // 5. Public URL'i döndür (BURAYA ADIM 3'TEKİ KENDİ R2 LINKINI YAZ)
-        // Örn: https://pub-123456.r2.dev
+        // 7. Public URL oluştur (Senin verdiğin link)
         const R2_PUBLIC_URL = "https://pub-bd8456f943ae4c68b14a610fc10fa1c6.r2.dev";
 
-        return json({
+        return new Response(JSON.stringify({
             success: true,
             url: `${R2_PUBLIC_URL}/${fileName}`
+        }), {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
         });
 
     } catch (e: any) {
-        return errorResponse(e.message || "Upload failed", 500);
+        return new Response(JSON.stringify({ error: e.message || "Upload failed" }), {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
     }
 }

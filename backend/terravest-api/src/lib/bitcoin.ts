@@ -2,78 +2,85 @@ import * as bitcoin from 'bitcoinjs-lib';
 import { BIP32Factory } from 'bip32';
 import ecc from '@bitcoinerlab/secp256k1';
 import { Buffer } from 'buffer';
+import { MempoolAddressResponse } from './types';
 
-
-// Cloudflare / Node uyumluluğu için Buffer ayarı
+// Buffer polyfill for Cloudflare Workers compatibility
 if (typeof globalThis.Buffer === 'undefined') {
     globalThis.Buffer = Buffer;
 }
 
 const bip32 = BIP32Factory(ecc);
 
-// ⚠️ BURAYA KENDİ ZPUB KODUNU YAPIŞTIR
-const ZPUB_KEY = "zpub6rtfCkm1nDYkRsgRatR7vgfJATT1apup59Lv7z6dQM9mP3Q4iFSWJNnb6QchDA8wEnZri2mzhjguM4BdMuq5EXa8gg9RW5xPTxeAgr4vJv4";
-
-export function generateDepositAddress(index: number): string {
+/**
+ * Generate Native Segwit (bc1q) Bitcoin address from Wasabi/Electrum xpub or zpub master key
+ * Derivation path: m/0/index (0 = receive, 1 = change)
+ */
+export function generateWasabiAddress(masterKey: string, index: number): string {
     try {
+        if (!masterKey) throw new Error("Master Key is missing!");
+
         const network = bitcoin.networks.bitcoin;
+        let node;
 
-        // ✅ ÇÖZÜM BURADA:
-        // Kütüphaneye zPub'ın "Sihirli Numarasını" (Magic Bytes) öğretiyoruz.
-        // zPub için Public Magic: 0x04b24746
-        const zpubNetwork = {
-            ...network,
-            bip32: {
-                public: 0x04b24746,
-                private: 0x04b2430c // Private key olmasa da format gereği ekledik
-            }
-        };
+        // Create node based on key type
+        if (masterKey.startsWith('xpub')) {
+            // Standard xpub: use normal network settings
+            node = bip32.fromBase58(masterKey, network);
+        }
+        else if (masterKey.startsWith('zpub')) {
+            // zpub: configure magic bytes for zpub format
+            const zpubNetwork = {
+                ...network,
+                bip32: {
+                    public: 0x04b24746,
+                    private: 0x04b2430c
+                }
+            };
+            node = bip32.fromBase58(masterKey, zpubNetwork);
+        }
+        else {
+            throw new Error("Key must start with 'xpub' or 'zpub'");
+        }
 
-        // 1. Anahtarı zPub ayarlarıyla içeri al (Parse et)
-        const node = bip32.fromBase58(ZPUB_KEY, zpubNetwork);
-
-        // 2. Türetme (Derivation): 0 (Receive) -> index
+        // Derive child key (Wasabi standard path: m/0/index)
+        // 0 = receive addresses, 1 = change addresses
         const child = node.derive(0).derive(index);
 
-        // 3. Adresi oluştururken standart ağı kullan (bc1 ön eki için)
+        // Generate Native Segwit address (p2wpkh -> bc1q format)
+        // Always outputs bc1q format, even if input is xpub
         const { address } = bitcoin.payments.p2wpkh({
             pubkey: child.publicKey,
-            network: network, // Burası standart 'bitcoin' ağı olmalı
+            network: network,
         });
 
         return address || "";
     } catch (error) {
-        console.error("Adres üretme hatası:", error);
-        return "";
+        console.error("Address generation error:", error);
+        throw new Error("Failed to generate Bitcoin address. Check key format.");
     }
 }
 
-
-
+/**
+ * Check if address has been used by querying Mempool API
+ * Returns true if address has no transactions
+ */
 export async function isAddressUnused(address: string): Promise<boolean> {
     try {
-        // Mempool API'sine soruyoruz (Mainnet)
         const response = await fetch(`https://mempool.space/api/address/${address}`);
 
         if (!response.ok) {
-            // Eğer adres hiç kullanılmadıysa Mempool bazen 404 dönebilir, bu iyi bir şeydir.
             if (response.status === 404) return true;
-            throw new Error("Mempool API hatası");
+            throw new Error("Mempool API error");
         }
 
-        const data = await response.json() as any;
+        const data = await response.json() as MempoolAddressResponse;
 
-        // Toplam işlem sayısı (Gelen + Giden)
+        // Count total transactions (confirmed + unconfirmed)
         const txCount = (data.chain_stats.tx_count || 0) + (data.mempool_stats.tx_count || 0);
 
-        console.log(`🔍 Adres Kontrolü (${address}): ${txCount} işlem bulundu.`);
-
-        // Eğer işlem sayısı 0 ise, bu adres TERTEMİZDİR.
         return txCount === 0;
-
     } catch (error) {
-        console.error("Adres geçmişi kontrol edilemedi:", error);
-        // Güvenlik için, hata alırsak "kullanılmış" varsayalım ki riske girmeyelim.
+        console.error("Address check error:", error);
         return false;
     }
 }

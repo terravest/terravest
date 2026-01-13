@@ -1,66 +1,56 @@
 import { Env } from "../index";
-import { requireAuth } from "../middleware/auth";
+import { requireAuth } from "../lib/auth";
+import { json, errorResponse } from "../lib/errors";
 
-export const handleWithdraw = async (request: Request, env: Env) => {
+/**
+ * Handle withdrawal request
+ * Creates a withdrawal request and deducts balance atomically
+ */
+export async function handleWithdraw(request: Request, env: Env): Promise<Response> {
     const auth = await requireAuth(request, env);
     if (auth instanceof Response) return auth;
     const user = auth.user;
-    const db = env.terravest_db;
 
     try {
-        const { amount, btc_address } = await request.json() as any;
+        const body = await request.json() as any;
+        const { amount, btc_address } = body;
 
-        if (!amount || amount < 50) return new Response(JSON.stringify({ error: "Minimum withdrawal is $50" }), { status: 400 });
-        if (!btc_address) return new Response(JSON.stringify({ error: "BTC Address required" }), { status: 400 });
-
-        // 1. Bakiye Yeterli mi?
-        const freshUser = await db.prepare("SELECT usd_balance FROM users WHERE id = ?").bind(user.id).first();
-        if (!freshUser || freshUser.usd_balance < amount) {
-            return new Response(JSON.stringify({ error: "Insufficient balance" }), { status: 400 });
+        // Validation
+        if (!amount || amount < 50) {
+            return errorResponse("Minimum withdrawal amount is $50", 400);
+        }
+        if (!btc_address || btc_address.length < 10) {
+            return errorResponse("Invalid Bitcoin address", 400);
         }
 
-        // 2. Komisyon Hesabı
-        // Kural: %1 + $5 Sabit
-        const fixedFee = 5.00;
-        const percentFee = amount * 0.01;
-        const totalFee = fixedFee + percentFee;
-        const netPayout = amount - totalFee; // Kullanıcıya gidecek net tutar (USD karşılığı)
+        const db = env.terravest_db;
 
-        // 3. ATOMİK İŞLEM
-        const queries = [];
+        // Check user's current balance
+        const currentUser = await db.prepare("SELECT usd_balance FROM users WHERE id = ?").bind(user.id).first();
 
-        // A) Bakiyeyi Düş (Tam tutarı düşüyoruz)
-        queries.push(
-            db.prepare("UPDATE users SET usd_balance = usd_balance - ? WHERE id = ?").bind(amount, user.id)
-        );
+        if (!currentUser || Number(currentUser.usd_balance) < amount) {
+            return errorResponse("Insufficient balance", 400);
+        }
 
-        // B) Çekim Talebi Oluştur (Pending)
-        queries.push(
+        // Atomic transaction: deduct balance and create withdrawal request
+        // Note: Frontend sends 'btc_address', stored as 'address' in database
+        await db.batch([
+            // Deduct balance immediately to prevent double withdrawal
+            db.prepare("UPDATE users SET usd_balance = usd_balance - ? WHERE id = ?").bind(amount, user.id),
+
+            // Create withdrawal request
             db.prepare(`
-                INSERT INTO withdrawals (user_id, amount_usd, fee_usd, btc_address, status, created_at) 
-                VALUES (?, ?, ?, ?, 'pending', ?)
-            `).bind(user.id, amount, totalFee, btc_address, new Date().toISOString())
-        );
+                INSERT INTO withdrawals (user_id, amount, address, status)
+                VALUES (?, ?, ?, 'pending')
+            `).bind(user.id, amount, btc_address)
+        ]);
 
-        // C) Ledger Kaydı
-        queries.push(
-            db.prepare("INSERT INTO transactions (user_id, type, amount, description, created_at) VALUES (?, 'withdrawal_request', ?, 'Withdrawal request created', ?)")
-                .bind(user.id, -amount, new Date().toISOString()) // Eksi bakiye
-        );
-
-        await db.batch(queries);
-
-        return new Response(JSON.stringify({
+        return json({
             success: true,
-            message: "Withdrawal request submitted. Admin approval required.",
-            details: {
-                requested: amount,
-                fee: totalFee,
-                estimated_payout_usd: netPayout
-            }
-        }), { status: 200 });
+            message: "Withdrawal request submitted successfully"
+        });
 
     } catch (e: any) {
-        return new Response(JSON.stringify({ error: e.message }), { status: 500 });
+        return errorResponse(e.message || "Internal server error", 500);
     }
-};
+}

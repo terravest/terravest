@@ -1,0 +1,479 @@
+{
+    "info": {
+        "_postman_id": "terravest-api-collection",
+        "name": "Terravest API",
+        "description": "API collection for Terravest Real Estate Tokenization Platform",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "Auth",
+            "item": [
+                {
+                    "name": "Register",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 201) {",
+                                    "    const response = pm.response.json();",
+                                    "    console.log('User registered:', response.user);",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"email\": \"user@example.com\",\n    \"username\": \"testuser\",\n    \"password\": \"password123\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/auth/register",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "auth",
+                                "register"
+                            ]
+                        },
+                        "description": "Register a new user account"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Login",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    const response = pm.response.json();",
+                                    "    pm.collectionVariables.set('auth_token', response.token);",
+                                    "    console.log('Token saved:', response.token);",
+                                    "    console.log('User:', response.user);",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"identifier\": \"user@example.com\",\n    \"password\": \"password123\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/auth/login",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "auth",
+                                "login"
+                            ]
+                        },
+                        "description": "Login with email/username and password. Token is automatically saved to collection variable 'auth_token'."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Current User (Me)",
+                    "event": [
+                        {
+                            "listen": "prerequest",
+                            "script": {
+                                "exec": [
+                                    "// Verify token is set",
+                                    "if (!pm.collectionVariables.get('auth_token')) {",
+                                    "    console.warn('Warning: auth_token not set. Please login first.');",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{auth_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/auth/me",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "auth",
+                                "me"
+                            ]
+                        },
+                        "description": "Get current authenticated user information"
+                    },
+                    "response": []
+                }
+            ],
+            "description": "Authentication endpoints"
+        },
+        {
+            "name": "Properties",
+            "item": [
+                {
+                    "name": "List Properties",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/properties",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "properties"
+                            ]
+                        },
+                        "description": "Get all available properties. Returns array of properties with their IDs, prices, and available tokens. Use this to find propertyId for Buy requests."
+                    },
+                    "response": []
+                }
+            ],
+            "description": "Property endpoints - Get list of available properties"
+        },
+        {
+            "name": "Deposit",
+            "item": [
+                {
+                    "name": "Create Deposit",
+                    "event": [
+                        {
+                            "listen": "prerequest",
+                            "script": {
+                                "exec": [
+                                    "// Verify token is set",
+                                    "if (!pm.collectionVariables.get('auth_token')) {",
+                                    "    console.warn('Warning: auth_token not set. Please login first.');",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        },
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    const response = pm.response.json();",
+                                    "    console.log('Deposit created:', response);",
+                                    "    if (response.deposit_id) {",
+                                    "        pm.collectionVariables.set('last_deposit_id', response.deposit_id);",
+                                    "    }",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{auth_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"amount\": 100\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/deposit",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "deposit"
+                            ]
+                        },
+                        "description": "Create a new deposit request. Amount must be a positive number. userId is automatically taken from auth token (do not include in body)."
+                    },
+                    "response": []
+                }
+            ],
+            "description": "Deposit endpoints"
+        },
+        {
+            "name": "Buy",
+            "item": [
+                {
+                    "name": "Buy Tokens",
+                    "event": [
+                        {
+                            "listen": "prerequest",
+                            "script": {
+                                "exec": [
+                                    "// Verify token is set",
+                                    "if (!pm.collectionVariables.get('auth_token')) {",
+                                    "    console.warn('Warning: auth_token not set. Please login first.');",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        },
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 201) {",
+                                    "    const response = pm.response.json();",
+                                    "    console.log('Tokens purchased:', response);",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{auth_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"propertyId\": 1,\n    \"tokenAmount\": 10\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/buy",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "buy"
+                            ]
+                        },
+                        "description": "Purchase tokens for a property. propertyId and tokenAmount must be positive integers."
+                    },
+                    "response": []
+                }
+            ],
+            "description": "Buy tokens for properties"
+        },
+        {
+            "name": "Sell",
+            "item": [
+                {
+                    "name": "Sell Tokens",
+                    "event": [
+                        {
+                            "listen": "prerequest",
+                            "script": {
+                                "exec": [
+                                    "// Verify token is set",
+                                    "if (!pm.collectionVariables.get('auth_token')) {",
+                                    "    console.warn('Warning: auth_token not set. Please login first.');",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        },
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    const response = pm.response.json();",
+                                    "    console.log('Tokens sold:', response);",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{auth_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"property_id\": 1,\n    \"token_amount\": 5\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/sell",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "sell"
+                            ]
+                        },
+                        "description": "Sell tokens for a property. property_id and token_amount must be positive numbers. A 1.5% trading fee is deducted from the sale amount."
+                    },
+                    "response": []
+                }
+            ],
+            "description": "Sell tokens for properties"
+        },
+        {
+            "name": "Claim",
+            "item": [
+                {
+                    "name": "Claim Rewards",
+                    "event": [
+                        {
+                            "listen": "prerequest",
+                            "script": {
+                                "exec": [
+                                    "// Verify token is set",
+                                    "if (!pm.collectionVariables.get('auth_token')) {",
+                                    "    console.warn('Warning: auth_token not set. Please login first.');",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        },
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    const response = pm.response.json();",
+                                    "    console.log('Rewards claimed:', response);",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{auth_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/claim",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "claim"
+                            ]
+                        },
+                        "description": "Claim accrued rent rewards from all investments. Minimum claimable amount is $0.01. All unclaimed rewards are moved to USD balance."
+                    },
+                    "response": []
+                }
+            ],
+            "description": "Claim rent rewards from investments"
+        }
+    ],
+    "event": [
+        {
+            "listen": "prerequest",
+            "script": {
+                "type": "text/javascript",
+                "exec": [
+                    ""
+                ]
+            }
+        },
+        {
+            "listen": "test",
+            "script": {
+                "type": "text/javascript",
+                "exec": [
+                    ""
+                ]
+            }
+        }
+    ],
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "http://localhost:8787",
+            "type": "string"
+        },
+        {
+            "key": "auth_token",
+            "value": "",
+            "type": "string"
+        }
+    ]
+}

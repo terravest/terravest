@@ -15,6 +15,6 @@ export const LoginSchema = z.object({
 
 // --- BUY ORDER SCHEMA ---
 export const BuySchema = z.object({
-    property_id: z.number().int().positive(),
-    token_amount: z.number().positive()
+    propertyId: z.number().int().positive(),
+    tokenAmount: z.number().positive()
 });

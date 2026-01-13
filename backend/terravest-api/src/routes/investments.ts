@@ -1,24 +1,27 @@
 import { Env } from "../index";
-import { requireAuth } from "../middleware/auth";
+import { requireAuth } from "../lib/auth";
+import { json, errorResponse } from "../lib/errors";
 
+/**
+ * Get user portfolio with investments, unclaimed rewards, and assets
+ * Returns formatted data for dashboard display
+ */
 export const handlePortfolio = async (request: Request, env: Env) => {
-    // 1. Yetki Kontrolü
     const auth = await requireAuth(request, env);
     if (auth instanceof Response) return auth;
     const user = auth.user;
     const db = env.terravest_db;
 
     try {
-        // 2. Kullanıcının Yatırımlarını Çek (Mülk detaylarıyla birleştirerek)
-        // YENİ: i.unclaimed_rewards sütununu da çekiyoruz.
+        // Fetch user investments with property details
         const { results: investments } = await db.prepare(`
             SELECT 
                 i.id,
                 i.property_id,
-                i.amount as token_count, 
+                i.token_amount as token_count, 
                 i.unclaimed_rewards,
                 p.title as propertyName,
-                p.price_per_token,
+                p.token_price as price_per_token,
                 p.total_tokens,
                 p.price as total_property_value
             FROM investments i
@@ -26,18 +29,15 @@ export const handlePortfolio = async (request: Request, env: Env) => {
             WHERE i.user_id = ?
         `).bind(user.id).all();
 
-        // 3. Geçmiş Siparişleri ve İşlemleri Çek
-        // Dashboard'daki "Recent Activity" tablosu için gerekli.
-        const { results: orders } = await db.prepare(`
-            SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC
-        `).bind(user.id).all();
+        // Orders table not yet implemented, return empty array
+        // TODO: Add order tracking functionality
+        const orders: any[] = [];
 
-        // 4. Veriyi Dashboard'un beklediği formata çevir
+        // Transform data to dashboard format
         let totalInvested = 0;
         let totalUnclaimed = 0;
 
         const assets = investments.map((inv: any) => {
-            // Hesaplamalar
             const currentValue = inv.token_count * inv.price_per_token;
             totalInvested += currentValue;
             totalUnclaimed += (inv.unclaimed_rewards || 0);
@@ -46,7 +46,7 @@ export const handlePortfolio = async (request: Request, env: Env) => {
                 id: inv.id,
                 property_id: inv.property_id,
                 propertyName: inv.propertyName,
-                investedAmount: inv.token_count, // Frontend'de 'investedAmount' token adedi olarak kullanılıyor
+                investedAmount: inv.token_count,
                 price_usd: inv.total_property_value,
                 total_tokens: inv.total_tokens,
                 current_price: inv.price_per_token,
@@ -54,24 +54,16 @@ export const handlePortfolio = async (request: Request, env: Env) => {
             };
         });
 
-        // 5. Yanıt Dön
-        return new Response(JSON.stringify({
+        return json({
             summary: {
                 totalInvested,
                 unclaimedRewards: totalUnclaimed
             },
             assets: assets,
             orders: orders
-        }), {
-            status: 200,
-            headers: {
-                "Content-Type": "application/json",
-                "Access-Control-Allow-Origin": "*"
-            }
         });
 
     } catch (e: any) {
-        console.error("Portfolio Error:", e.message); // Loglara hatayı basar
-        return new Response(JSON.stringify({ error: e.message }), { status: 500 });
+        return errorResponse(e.message || "Internal server error", 500);
     }
 };

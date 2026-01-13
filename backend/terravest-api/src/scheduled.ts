@@ -1,48 +1,52 @@
 import { Env } from "./index";
 
 // MANAGEMENT FEE RATE (10%)
-// This rate is deducted from gross rent for platform maintenance, taxes, and operational expenses.
 const MANAGEMENT_FEE_RATE = 0.10;
 
 export async function distributeRent(env: Env) {
-    const db = env.terravest_db;
     const today = new Date().toISOString();
-
     console.log(`🔄 Daily Rent Calculation Started: ${today}`);
 
-    // 1. Fetch all active properties
-    const { results: properties } = await db.prepare("SELECT * FROM properties").all();
+    try {
+        // ============================================================
+        // 🚀 BULK UPDATE OPTIMIZATION
+        // ============================================================
+        // Instead of looping through properties and updating users one by one,
+        // we use a single SQL update with a subquery.
+        // This handles thousands of investments in milliseconds.
 
-    for (const propResult of properties) {
-        const prop = propResult as any;
+        // LOGIC EXPLAINED IN SQL:
+        // 1. Get Property Data: Price, Yield, Total Tokens.
+        // 2. Gross Annual = Price * (Yield / 100)
+        // 3. Net Annual = Gross Annual * (1 - Management Fee)
+        // 4. Daily Per Token = (Net Annual / Total Tokens) / 365
+        // 5. Add to User: Current Rewards + (User's Token Amount * Daily Per Token)
 
-        // A) ANNUAL NET INCOME FORMULA (BASED ON 365 DAYS)
-        // Formula: (Property Price * Annual Yield)
-        const annualYield = prop.rental_yield || 6; // Default 6%
-        const annualGrossRent = prop.price * (annualYield / 100);
+        const query = `
+            UPDATE investments
+            SET 
+                last_rent_calc_date = ?,
+                unclaimed_rewards = unclaimed_rewards + (
+                    token_amount * (
+                        SELECT 
+                            ( (price * (rental_yield / 100.0)) * (1.0 - ?) ) / total_tokens / 365.0
+                        FROM properties 
+                        WHERE properties.id = investments.property_id
+                    )
+                )
+            WHERE EXISTS (
+                SELECT 1 FROM properties WHERE id = investments.property_id
+            )
+        `;
 
-        // B) MANAGEMENT FEE DEDUCTION (10%)
-        // Platform revenue is separated here.
-        const managementFee = annualGrossRent * MANAGEMENT_FEE_RATE;
-        const annualNetRent = annualGrossRent - managementFee;
+        // Bind parameters: [Date, ManagementFeeRate]
+        const result = await env.terravest_db.prepare(query)
+            .bind(today, MANAGEMENT_FEE_RATE)
+            .run();
 
-        // C) DAILY NET RENT PER SHARE
-        // If total tokens are not in DB, default to 1000.
-        const totalShares = prop.total_tokens || 1000;
+        console.log(`✅ Daily rent accrual completed. Updated ${result.meta.changes} investment records.`);
 
-        // Daily Rent Per Share = (Annual Net Rent / Total Shares) / 365 Days
-        const dailyRentPerShare = (annualNetRent / totalShares) / 365;
-
-        // D) UPDATE INVESTORS (BATCH SQL)
-        // Instead of updating one by one in a loop, we update all investments for that property in a single query.
-        // unclaimed_rewards = Current + (User's Share Amount * Daily Rent Per Share)
-        await db.prepare(`
-            UPDATE investments 
-            SET unclaimed_rewards = unclaimed_rewards + (amount * ?),
-                last_rent_calc_date = ?
-            WHERE property_id = ?
-        `).bind(dailyRentPerShare, today, prop.id).run();
+    } catch (e: any) {
+        console.error("❌ CRON ERROR (Rent Distribution):", e);
     }
-
-    console.log("✅ Daily rent accrual completed. (Users can withdraw via 'Claim' button)");
 }

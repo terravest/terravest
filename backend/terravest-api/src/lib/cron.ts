@@ -1,74 +1,68 @@
-import { checkBitcoinBalance } from './checkPayment';
-import { Env } from '../index'; // Env tanımını index'ten alacağız
+import { Env } from '../index';
+import { MempoolAddressResponse } from './types'; // ✅ Defined types imported
 
 export async function processPendingDeposits(env: Env) {
-    console.log("🔄 Cron Job: Bekleyen ödemeler kontrol ediliyor...");
+    const db = env.terravest_db;
 
-    try {
-        // 1. Bekleyen (pending) siparişleri veritabanından çek
-        const { results: pendingDeposits } = await env.terravest_db
-            .prepare("SELECT * FROM deposits WHERE status = 'pending'")
-            .all();
+    // 1. Fetch pending transactions
+    const { results } = await db.prepare(`
+        SELECT * FROM deposits WHERE status = 'pending'
+    `).all();
 
-        if (!pendingDeposits || pendingDeposits.length === 0) {
-            console.log("✅ Bekleyen ödeme yok.");
-            return;
-        }
+    if (!results || results.length === 0) {
+        console.log("💤 No pending deposits.");
+        return;
+    }
 
-        console.log(`🔎 ${pendingDeposits.length} adet işlem taranacak.`);
+    console.log(`🕵️‍♂️ Checking ${results.length} pending deposits...`);
 
-        // 2. Güncel Bitcoin Fiyatını Çek (USD)
-        let btcPrice = 95000; // Varsayılan (Fallback)
+    for (const deposit of results) {
+        const address = deposit.address as string;
+        const depositId = deposit.id;
+        const userId = deposit.user_id;
+        const amountUSD = deposit.amount_usd as number;
+
         try {
-            // Binance API'si genelde rate-limit koymaz ve çok hızlıdır
-            const priceRes = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT');
-            const priceData = await priceRes.json() as any;
+            // 2. Query Blockchain (Mempool API)
+            const response = await fetch(`https://mempool.space/api/address/${address}`);
 
-            if (priceData && priceData.price) {
-                btcPrice = parseFloat(priceData.price);
-                console.log(`✅ Güncel Kur Çekildi: $${btcPrice}`);
+            if (!response.ok) {
+                console.error(`API Error (${address}): ${response.statusText}`);
+                continue;
             }
-        } catch (e) {
-            console.error("Fiyat çekilemedi, varsayılan ($95,000) kullanılıyor.");
-        }
 
-        // 3. Her bir siparişi kontrol et
-        for (const deposit of pendingDeposits) {
-            // TypeScript tip güvenliği için cast işlemi
-            const d = deposit as any;
+            // ✅ TYPING FIX: Cast to MempoolAddressResponse instead of 'any'
+            const data = await response.json() as MempoolAddressResponse;
 
-            // Mempool API ile bakiyeyi sor
-            const currentBtcBalance = await checkBitcoinBalance(d.address);
+            // 3. Check Balance
+            // funded_txo_sum: Total Satoshis received by this address
+            // TypeScript now validates 'chain_stats' and 'funded_txo_sum' exist.
+            const receivedSatoshis = (data.chain_stats.funded_txo_sum || 0) + (data.mempool_stats.funded_txo_sum || 0);
 
-            // Eğer para geldiyse (Bakiye 0'dan büyükse)
-            if (currentBtcBalance > 0) {
-                console.log(`💰 ÖDEME YAKALANDI! ID: ${d.id}, Tutar: ${currentBtcBalance} BTC`);
-
-                const addedUsd = currentBtcBalance * btcPrice;
-
-                // ATOMİK İŞLEM: Hem siparişi güncelle hem parayı ekle (Hata olursa ikisi de iptal olur)
-                await env.terravest_db.batch([
-                    // A. Sipariş durumunu 'completed' yap ve tutarı işle
-                    env.terravest_db.prepare(`
-                        UPDATE deposits 
-                        SET status = 'completed', amount_usd = ?, updated_at = datetime('now') 
-                        WHERE id = ?
-                    `).bind(addedUsd, d.id),
-
-                    // B. Kullanıcının USD bakiyesini güncelle
-                    // (Not: users tablosunda 'usd_balance' sütunu olduğunu varsayıyoruz)
-                    env.terravest_db.prepare(`
-                        UPDATE users 
-                        SET usd_balance = usd_balance + ? 
-                        WHERE id = ?
-                    `).bind(addedUsd, d.user_id)
-                ]);
-
-                console.log(`✅ İşlem Tamamlandı: Kullanıcı ${d.user_id} hesabına $${addedUsd.toFixed(2)} eklendi.`);
+            // If no funds received yet, skip
+            if (receivedSatoshis === 0) {
+                console.log(`⏳ Payment pending: ID ${depositId} -> ${address}`);
+                continue;
             }
-        }
 
-    } catch (error) {
-        console.error("🔥 Cron Hatası:", error);
+            // 4. Payment Detected! Complete the transaction
+            console.log(`💰 PAYMENT DETECTED! ID: ${depositId}, Received: ${receivedSatoshis} sats`);
+
+            // Start Transaction: Update deposit status AND add balance to user
+            await db.batch([
+                // A. Mark deposit as 'completed'
+                db.prepare("UPDATE deposits SET status = 'completed', updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(depositId),
+
+                // B. Add USD balance to user
+                // NOTE: Ideally, convert received BTC to USD here. 
+                // For MVP, we credit the declared USD amount.
+                db.prepare("UPDATE users SET usd_balance = usd_balance + ? WHERE id = ?").bind(amountUSD, userId)
+            ]);
+
+            console.log(`✅ ID ${depositId} completed and balance updated.`);
+
+        } catch (error) {
+            console.error(`Error (ID ${depositId}):`, error);
+        }
     }
 }

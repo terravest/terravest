@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { X, Wallet, AlertTriangle, Loader2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../lib/api';
+import { useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 
 interface BuyModalProps {
@@ -12,6 +13,7 @@ interface BuyModalProps {
 
 export default function BuyModal({ property, onClose, onSuccess }: BuyModalProps) {
     const { user, refreshUser } = useAuth(); // Bakiye güncellemek için gerekli
+    const queryClient = useQueryClient(); // Portfolio cache'i invalidate etmek için
     const [amount, setAmount] = useState('1');
     const [isProcessing, setIsProcessing] = useState(false);
 
@@ -35,12 +37,17 @@ export default function BuyModal({ property, onClose, onSuccess }: BuyModalProps
         setIsProcessing(true);
         try {
             // Backend API çağrısı
-            await api.buyAsset({ property_id: property.id, token_amount: tokenAmount });
+            await api.buyToken({ propertyId: property.id, tokenAmount: tokenAmount });
 
             toast.success("Purchase successful! Property added to your portfolio.");
 
             // Kullanıcı bakiyesini yenile
             if (refreshUser) refreshUser();
+
+            // CRITICAL: Invalidate portfolio query cache to force refetch on dashboard
+            // This ensures the newly purchased asset appears in the portfolio UI
+            // Without this, React Query may serve stale cached data (5min staleTime)
+            queryClient.invalidateQueries({ queryKey: ['portfolio'] });
 
             onSuccess(); // Modalı kapat ve listeyi yenile
         } catch (error: any) {
@@ -51,8 +58,16 @@ export default function BuyModal({ property, onClose, onSuccess }: BuyModalProps
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative">
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in"
+            data-testid="modal-backdrop"
+            onClick={onClose}
+        >
+            <div
+                className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative z-10"
+                data-testid="buy-modal-content"
+                onClick={(e) => e.stopPropagation()}
+            >
                 <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition">
                     <X size={24} />
                 </button>
@@ -123,6 +138,7 @@ export default function BuyModal({ property, onClose, onSuccess }: BuyModalProps
                             ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
                             : 'bg-[#009B9E] hover:bg-[#00888a] text-white hover:shadow-xl hover:-translate-y-0.5'
                         }`}
+                    data-testid="buy-confirm-button"
                 >
                     {isProcessing ? (
                         <><Loader2 className="animate-spin" /> Processing...</>

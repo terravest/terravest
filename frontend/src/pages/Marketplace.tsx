@@ -52,7 +52,7 @@ export default function Marketplace() {
     };
 
     return (
-        <div className="min-h-screen bg-[#F9F7F3] font-sans pb-20">
+        <div className="min-h-screen bg-[#F9F7F3] font-sans pb-20" data-testid="marketplace-page">
             <Navbar />
 
             <div className="container mx-auto px-4 py-8">
@@ -75,10 +75,21 @@ export default function Marketplace() {
                     </div>
                 )}
 
+                {!loading && !error && properties.length === 0 && (
+                    <div className="text-center py-20">
+                        <p className="text-slate-500 text-lg">No properties available at the moment.</p>
+                    </div>
+                )}
+
                 {!loading && !error && properties.length > 0 && (
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                         {properties.map((property) => (
-                            <div key={property.id} className="bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition duration-300 border border-slate-100 flex flex-col h-full group">
+                            <div
+                                key={property.id}
+                                className="bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition duration-300 border border-slate-100 flex flex-col h-full group"
+                                data-property-id={property.id}
+                                data-testid={`property-card-${property.id}`}
+                            >
 
                                 <div className="relative h-64 overflow-hidden">
                                     <div className="absolute top-4 right-4 z-10 bg-[#009B9E] text-white px-3 py-1 rounded-lg text-xs font-bold shadow-sm">
@@ -129,6 +140,7 @@ export default function Marketplace() {
                                     <button
                                         onClick={() => handleBuyClick(property)}
                                         className="w-full mt-auto py-4 bg-[#0F172A] hover:bg-slate-800 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition"
+                                        data-testid={`buy-button-${property.id}`}
                                     >
                                         Buy Tokens <TrendingUp size={18} />
                                     </button>

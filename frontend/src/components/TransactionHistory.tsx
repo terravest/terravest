@@ -1,28 +1,37 @@
-import { CheckCircle, Clock, XCircle, ExternalLink, RefreshCw, AlertTriangle } from 'lucide-react';
+import { CheckCircle, Clock, XCircle, ExternalLink, RefreshCw, AlertTriangle, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
+
+// Backend'den gelen birleşmiş veri tipi
+interface Transaction {
+    type: 'deposit' | 'withdrawal';
+    id: number;
+    amount: number;
+    status: string;
+    created_at: string;
+    tx_hash?: string;
+    target_address?: string;
+}
 
 export default function TransactionHistory() {
     const { user } = useAuth();
 
     const { data: transactions = [], isLoading, isError, error, refetch } = useQuery({
-        // Only run if user ID exists
         queryKey: ['transactions', user?.id],
-
         queryFn: async () => {
-            if (!user?.id) return [];
-            return await api.getTransactions(user.id);
+            const res = await api.getTransactions();
+            return res.success ? res.data : [];
         },
-
         enabled: !!user?.id,
-        refetchOnWindowFocus: true,
+        refetchOnWindowFocus: false, // Sayfa odağı değişince sürekli istek atmasın
     });
 
     // Status Badge Helper
     const getStatusBadge = (status: string) => {
         switch (status) {
             case 'completed':
+            case 'approved':
                 return (
                     <span className="flex items-center gap-1 text-green-600 bg-green-50 px-2 py-1 rounded-full text-xs font-bold border border-green-200">
                         <CheckCircle size={12} /> Completed
@@ -60,12 +69,12 @@ export default function TransactionHistory() {
                 <table className="w-full text-sm text-left">
                     <thead className="text-xs text-slate-500 uppercase bg-slate-50/50">
                         <tr>
-                            <th className="px-6 py-4">Date</th>
                             <th className="px-6 py-4">Type</th>
+                            <th className="px-6 py-4">Date</th>
                             <th className="px-6 py-4">Amount</th>
-                            <th className="px-6 py-4">Address</th>
+                            <th className="px-6 py-4">Address / Info</th>
                             <th className="px-6 py-4">Status</th>
-                            <th className="px-6 py-4 text-right">Action</th>
+                            <th className="px-6 py-4 text-right">Chain</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -93,32 +102,63 @@ export default function TransactionHistory() {
                                 </td>
                             </tr>
                         ) : (
-                            transactions.map((tx: any) => (
-                                <tr key={tx.id} className="hover:bg-slate-50/80 transition-colors">
+                            transactions.map((tx: Transaction) => (
+                                <tr key={`${tx.type}-${tx.id}`} className="hover:bg-slate-50/80 transition-colors">
+
+                                    {/* TYPE (Deposit vs Withdraw) */}
+                                    <td className="px-6 py-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className={`p-2 rounded-full ${tx.type === 'deposit' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                                                {tx.type === 'deposit' ? <ArrowDownLeft size={18} /> : <ArrowUpRight size={18} />}
+                                            </div>
+                                            <span className="font-bold text-slate-700 capitalize">{tx.type}</span>
+                                        </div>
+                                    </td>
+
+                                    {/* DATE */}
                                     <td className="px-6 py-4 text-slate-600">
-                                        {new Date(tx.created_at || Date.now()).toLocaleDateString()}
+                                        <div className="font-medium">{new Date(tx.created_at).toLocaleDateString()}</div>
+                                        <div className="text-xs text-slate-400">{new Date(tx.created_at).toLocaleTimeString()}</div>
                                     </td>
-                                    <td className="px-6 py-4 font-medium text-slate-700">Deposit</td>
+
+                                    {/* AMOUNT */}
                                     <td className="px-6 py-4 font-bold text-slate-900">
-                                        ${tx.amount_usd}
+                                        <span className={tx.type === 'deposit' ? 'text-green-600' : 'text-slate-900'}>
+                                            {tx.type === 'deposit' ? '+' : '-'}${tx.amount.toLocaleString()}
+                                        </span>
                                     </td>
-                                    <td className="px-6 py-4 font-mono text-xs text-slate-500 max-w-[120px] truncate" title={tx.address}>
-                                        {tx.address}
+
+                                    {/* ADDRESS */}
+                                    <td className="px-6 py-4 font-mono text-xs text-slate-500 max-w-[120px] truncate">
+                                        {tx.target_address || '-'}
                                     </td>
+
+                                    {/* STATUS */}
                                     <td className="px-6 py-4">
                                         {getStatusBadge(tx.status)}
                                     </td>
+
+                                    {/* LINK (TX Hash or Address) */}
                                     <td className="px-6 py-4 text-right">
-                                        {tx.address && (
+                                        {tx.tx_hash ? (
                                             <a
-                                                href={`https://mempool.space/address/${tx.address}`}
+                                                href={`https://mempool.space/tx/${tx.tx_hash}`}
                                                 target="_blank"
                                                 rel="noreferrer"
                                                 className="text-blue-500 hover:text-blue-700 inline-flex items-center gap-1 text-xs font-medium"
                                             >
-                                                View <ExternalLink size={10} />
+                                                TX Check <ExternalLink size={10} />
                                             </a>
-                                        )}
+                                        ) : tx.target_address ? (
+                                            <a
+                                                href={`https://mempool.space/address/${tx.target_address}`}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="text-slate-400 hover:text-slate-600 inline-flex items-center gap-1 text-xs font-medium"
+                                            >
+                                                View Addr <ExternalLink size={10} />
+                                            </a>
+                                        ) : null}
                                     </td>
                                 </tr>
                             ))

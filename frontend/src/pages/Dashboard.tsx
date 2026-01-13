@@ -3,19 +3,20 @@ import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import { api } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query'; // ✅ useQueryClient eklendi
 import {
     TrendingUp, Loader2,
     ArrowDownCircle, X, DollarSign,
-    User, Lock, Mail, LogOut, Settings, PieChart, ArrowUpRight, AlertTriangle
+    User, Lock, Mail, LogOut, Settings, Wallet, PieChart, ArrowUpRight, AlertTriangle, Calculator
 } from 'lucide-react';
 import PaymentModal from '../components/PaymentModal';
-import TransactionHistory from '../components/TransactionHistory'; // ✅ YENİ EKLENDİ
+import TransactionHistory from '../components/TransactionHistory';
 import toast from 'react-hot-toast';
 
 export default function Dashboard() {
     const { user, logout, refreshUser } = useAuth();
     const navigate = useNavigate();
+    const queryClient = useQueryClient(); // ✅ Query Client başlatıldı
     const [activeTab, setActiveTab] = useState<'portfolio' | 'settings'>('portfolio');
 
     // --- 🔒 GÜVENLİK KONTROLÜ (REDIRECT) ---
@@ -73,6 +74,11 @@ export default function Dashboard() {
     const pendingRewards = data?.assets?.reduce((acc: number, asset: any) => acc + (asset.unclaimed_rewards || 0), 0) || 0;
     const totalNetWorth = cashBalance + assetsValue + pendingRewards;
 
+    // --- FEE HESAPLAMA MANTIĞI ---
+    const wAmount = parseFloat(withdrawAmount) || 0;
+    const wFee = 5 + (wAmount * 0.01); // $5 + %1
+    const wNet = wAmount > 0 ? wAmount - wFee : 0;
+    const isBalanceSufficient = wAmount <= cashBalance;
 
     // --- ACTIONS ---
 
@@ -124,7 +130,9 @@ export default function Dashboard() {
         setIsProcessing(true);
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`${import.meta.env.VITE_API_URL || "http://127.0.0.1:8787/api"}/withdraw`, {
+            const apiUrl = import.meta.env.VITE_API_URL || "http://127.0.0.1:8787/api";
+
+            const res = await fetch(`${apiUrl}/withdraw`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({ amount, btc_address: withdrawAddress })
@@ -133,10 +141,17 @@ export default function Dashboard() {
             if (!res.ok) throw new Error(json.error);
 
             toast.success("Withdrawal request submitted! Pending Admin Approval.");
+
+            // ✅ BAŞARILI OLUNCA:
             setWithdrawModalOpen(false);
             setWithdrawAmount('');
             setWithdrawAddress('');
+
+            // 1. Kullanıcı bakiyesini güncelle
             if (refreshUser) refreshUser();
+            // 2. İşlem Geçmişi tablosunu yenilemeye zorla!
+            queryClient.invalidateQueries({ queryKey: ['transactions'] });
+
         } catch (error: any) {
             toast.error(error.message);
         } finally {
@@ -195,7 +210,10 @@ export default function Dashboard() {
 
                 {/* ==================== PORTFOLIO TAB ==================== */}
                 {activeTab === 'portfolio' && (
-                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div
+                        className="animate-in fade-in slide-in-from-bottom-4 duration-500"
+                        data-testid="portfolio-section"
+                    >
 
                         {/* 1. TOTAL NET WORTH CARD */}
                         <div className="grid md:grid-cols-3 gap-6 mb-12">
@@ -270,12 +288,21 @@ export default function Dashboard() {
                         </h2>
 
                         {data?.assets && data.assets.length > 0 ? (
-                            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+                            <div
+                                className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12"
+                                data-testid="portfolio-assets-list"
+                            >
                                 {data.assets.map((asset: any, index: number) => {
                                     const unitPrice = getUnitPrice(asset);
                                     const currentValue = asset.investedAmount * unitPrice;
                                     return (
-                                        <div key={index} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 flex flex-col justify-between h-full hover:shadow-md transition group">
+                                        <div
+                                            key={index}
+                                            className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 flex flex-col justify-between h-full hover:shadow-md transition group"
+                                            data-testid={`portfolio-asset-card-${asset.property_id}`}
+                                            data-asset-id={asset.id}
+                                            data-asset-property-id={asset.property_id}
+                                        >
                                             <div>
                                                 <div className="flex justify-between items-start mb-4">
                                                     <div className="font-bold text-[#0F172A] text-lg group-hover:text-[#009B9E] transition">{asset.propertyName}</div>
@@ -284,7 +311,12 @@ export default function Dashboard() {
                                                 <div className="space-y-3 mb-6">
                                                     <div className="flex justify-between text-sm">
                                                         <span className="text-slate-400">Tokens Owned</span>
-                                                        <span className="font-bold text-slate-700">{asset.investedAmount.toFixed(2)}</span>
+                                                        <span
+                                                            className="font-bold text-slate-700"
+                                                            data-testid={`portfolio-token-amount-${asset.property_id}`}
+                                                        >
+                                                            {asset.investedAmount.toFixed(2)}
+                                                        </span>
                                                     </div>
                                                     <div className="flex justify-between text-sm">
                                                         <span className="text-slate-400">Current Value</span>
@@ -304,12 +336,15 @@ export default function Dashboard() {
                                 })}
                             </div>
                         ) : (
-                            <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-slate-300 mb-12">
+                            <div
+                                className="text-center py-12 bg-white rounded-2xl border border-dashed border-slate-300 mb-12"
+                                data-testid="portfolio-empty-state"
+                            >
                                 <p className="text-slate-500">No active assets found. Start investing from the Marketplace!</p>
                             </div>
                         )}
 
-                        {/* 3. TRANSACTION & ORDER HISTORY (YENİ EKLENEN KISIM) */}
+                        {/* 3. TRANSACTION HISTORY */}
                         <div className="mb-12">
                             <TransactionHistory />
                         </div>
@@ -399,11 +434,11 @@ export default function Dashboard() {
                 <PaymentModal
                     order={selectedOrder}
                     onClose={() => setSelectedOrder(null)}
-                    onSuccess={() => { setSelectedOrder(null); refetch(); }}
+                    onSuccess={() => { setSelectedOrder(null); refetch(); queryClient.invalidateQueries({ queryKey: ['transactions'] }); }}
                 />
             )}
 
-            {/* SELL MODAL (Updated) */}
+            {/* SELL MODAL */}
             {sellModalOpen && selectedAsset && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
                     <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative">
@@ -435,7 +470,7 @@ export default function Dashboard() {
                 </div>
             )}
 
-            {/* CLAIM MODAL (Updated) */}
+            {/* CLAIM MODAL */}
             {claimModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
                     <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 relative text-center">
@@ -456,7 +491,7 @@ export default function Dashboard() {
                 </div>
             )}
 
-            {/* NEW: WITHDRAW MODAL */}
+            {/* ✅ WITHDRAW MODAL - GÜNCELLENDİ (FEE HESAPLAMA) */}
             {withdrawModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
                     <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative">
@@ -472,8 +507,41 @@ export default function Dashboard() {
 
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Amount to Withdraw (USD)</label>
-                                <input type="number" step="10" min="50" max={cashBalance} required className="w-full bg-slate-50 border border-slate-200 rounded-lg p-3 text-lg font-bold outline-none focus:ring-2 focus:ring-[#009B9E]" placeholder="Min $50" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
+                                <div className="relative">
+                                    <input
+                                        type="number"
+                                        step="10"
+                                        min="50"
+                                        max={cashBalance}
+                                        required
+                                        className={`w-full bg-white border rounded-xl p-3 text-lg font-bold outline-none focus:ring-2 transition ${!isBalanceSufficient && wAmount > 0 ? 'border-red-300 focus:ring-red-200 text-red-600' : 'border-slate-200 focus:ring-[#009B9E] text-slate-900'}`}
+                                        placeholder="Min $50"
+                                        value={withdrawAmount}
+                                        onChange={e => setWithdrawAmount(e.target.value)}
+                                    />
+                                    {!isBalanceSufficient && wAmount > 0 && (
+                                        <p className="text-red-500 text-xs mt-1 font-bold">Insufficient funds</p>
+                                    )}
+                                </div>
                             </div>
+
+                            {/* 💰 DYNAMIC FEE CALCULATION BOX */}
+                            {wAmount > 0 && (
+                                <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 space-y-2">
+                                    <div className="flex justify-between text-sm text-slate-500">
+                                        <span>Withdrawal Amount:</span>
+                                        <span>${wAmount.toFixed(2)}</span>
+                                    </div>
+                                    <div className="flex justify-between text-sm text-red-500">
+                                        <span>Processing Fee ($5 + 1%):</span>
+                                        <span>-${wFee.toFixed(2)}</span>
+                                    </div>
+                                    <div className="border-t border-slate-200 pt-2 flex justify-between font-bold text-[#0F172A]">
+                                        <span>You will receive:</span>
+                                        <span className="flex items-center gap-1"><Calculator size={14} /> ${wNet.toFixed(2)}</span>
+                                    </div>
+                                </div>
+                            )}
 
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Destination BTC Address</label>
@@ -483,12 +551,7 @@ export default function Dashboard() {
                                 </div>
                             </div>
 
-                            <div className="bg-amber-50 p-3 rounded-lg flex gap-3 text-amber-700 text-xs items-start border border-amber-100">
-                                <AlertTriangle size={16} className="shrink-0 mt-0.5" />
-                                <p>A <strong>$5.00 + 1%</strong> fee applies. Funds will be converted to BTC at the time of processing by Admin.</p>
-                            </div>
-
-                            <button type="submit" disabled={isProcessing} className="w-full bg-[#0F172A] hover:bg-slate-800 text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2">
+                            <button type="submit" disabled={isProcessing || !isBalanceSufficient} className="w-full bg-[#0F172A] hover:bg-slate-800 text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
                                 {isProcessing ? <Loader2 className="animate-spin" /> : 'Request Withdrawal'}
                             </button>
                         </form>

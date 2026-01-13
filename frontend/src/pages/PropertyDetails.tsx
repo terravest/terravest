@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom'; // useNavigate eklendi
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import Navbar from '../components/Navbar';
-import { useAuth } from '../context/AuthContext'; // Auth kontrolü için eklendi
-import { FileText, CheckCircle, Loader2, ArrowLeft, MapPin, AlertCircle } from 'lucide-react';
+import PropertyGallery from '../components/PropertyGallery';
+import { useAuth } from '../context/AuthContext';
+import { FileText, CheckCircle, Loader2, ArrowLeft, MapPin, AlertCircle, TrendingUp } from 'lucide-react';
 
-export default function PropertyDetail() {
+export default function PropertyDetails() {
     const { id } = useParams();
     const navigate = useNavigate();
-    const { isAuthenticated } = useAuth(); // Kullanıcı giriş yapmış mı?
+    const { isAuthenticated } = useAuth();
 
     const [prop, setProp] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -18,24 +19,25 @@ export default function PropertyDetail() {
     useEffect(() => {
         async function load() {
             try {
-                const data = await api.getProperties();
-                const list = Array.isArray(data) ? data : (data.results || []);
-                const found = list.find((p: any) => p.id === Number(id));
-                setProp(found);
+                if (id) {
+                    // Backend'deki güncellediğimiz endpoint (resimleri array olarak döner)
+                    const property = await api.getProperty(id);
+                    setProp(property);
+                } else {
+                    // ID yoksa listeye dön
+                    navigate('/marketplace');
+                }
             } catch (e) {
-                console.error(e);
+                console.error("Failed to load property:", e);
             } finally {
                 setLoading(false);
             }
         }
         load();
-    }, [id]);
+    }, [id, navigate]);
 
     const handleBuy = async () => {
-        // 1. GİRİŞ KONTROLÜ (YENİ)
         if (!isAuthenticated) {
-            // Hata vermek yerine Login sayfasına gönderiyoruz
-            // state: { from: ... } ile login sonrası geri dönmesi sağlanabilir (ileride)
             navigate('/login');
             return;
         }
@@ -44,14 +46,12 @@ export default function PropertyDetail() {
 
         setIsSubmitting(true);
         try {
-            // API isteği gönderilirken 'amount' değil 'token_amount' bekliyor backend
             await api.createOrder({
                 property_id: prop.id,
-                token_amount: buyAmount, // Backend bu ismi bekliyor
-                payment_address: "manual-btc-transfer" // Backend bunu zaten eziyor ama tip hatası vermesin diye koyduk
+                token_amount: buyAmount,
+                payment_address: "manual-btc-transfer"
             });
 
-            // Başarılı olursa Dashboard'a yönlendir (Ödeme yapmak için)
             alert("Order Request Created! Please go to Dashboard to complete payment.");
             navigate('/dashboard');
 
@@ -62,124 +62,177 @@ export default function PropertyDetail() {
         }
     };
 
-    if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-[#009B9E] h-12 w-12" /></div>;
-    if (!prop) return <div className="text-center py-20">Property not found.</div>;
+    if (loading) return (
+        <div className="min-h-screen flex items-center justify-center bg-[#F9F7F3]">
+            <Loader2 className="animate-spin text-[#009B9E] h-12 w-12" />
+        </div>
+    );
+
+    if (!prop) return (
+        <div className="min-h-screen flex flex-col items-center justify-center bg-[#F9F7F3] gap-4">
+            <div className="text-xl font-bold text-slate-700">Property not found.</div>
+            <Link to="/marketplace" className="text-[#009B9E] hover:underline">Back to Marketplace</Link>
+        </div>
+    );
 
     const tokenPrice = prop.price_usd / prop.total_tokens;
+
+    // --- RESİM HAZIRLIĞI ---
+    // Backend'den 'images' array'i geliyorsa onu kullan, yoksa 'image_url'i tek elemanlı array yap.
+    const images = prop.images && prop.images.length > 0
+        ? prop.images
+        : (prop.image_url ? [{ id: null, url: prop.image_url, isMain: true, displayOrder: 0 }] : []);
 
     return (
         <div className="min-h-screen bg-[#F9F7F3] font-sans pb-20">
             <Navbar />
 
-            {/* HERO IMAGE */}
-            <div className="relative h-[50vh] bg-slate-900">
-                <img
-                    src={prop.image_url || `https://images.unsplash.com/photo-1560184897-ae75f418493e?ixlib=rb-1.2.1&auto=format&fit=crop&w=1920&q=80&sig=${prop.id}`}
-                    className="w-full h-full object-cover opacity-60"
-                    alt={prop.title}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0F172A] to-transparent"></div>
-                <div className="absolute bottom-0 left-0 w-full p-8 container mx-auto">
-                    <Link to="/marketplace" className="text-white/80 hover:text-white flex items-center gap-2 mb-4 text-sm font-bold"><ArrowLeft size={16} /> Back to Market</Link>
-                    <span className="bg-[#009B9E] text-white px-3 py-1 rounded text-xs font-bold uppercase tracking-wide mb-2 inline-block">Tokenized Asset</span>
-                    <h1 className="text-4xl md:text-5xl font-bold text-white mb-2">{prop.title}</h1>
-                    <div className="flex items-center gap-2 text-white/80">
-                        <MapPin size={18} />
-                        <span>Miami, FL (USA)</span>
+            {/* HEADER */}
+            <div className="bg-white border-b border-slate-200 sticky top-0 z-20 shadow-sm">
+                <div className="container mx-auto px-4 py-4 md:py-6">
+                    <Link to="/marketplace" className="text-slate-500 hover:text-[#009B9E] flex items-center gap-2 mb-3 text-sm font-bold transition-colors w-fit">
+                        <ArrowLeft size={16} /> Back to Market
+                    </Link>
+                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+                        <div>
+                            <div className="flex items-center gap-3 mb-2">
+                                <span className="bg-[#009B9E] text-white px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide">
+                                    Tokenized Asset
+                                </span>
+                                <div className="flex items-center gap-1.5 text-slate-500">
+                                    <MapPin size={14} />
+                                    <span className="text-xs font-bold uppercase">{prop.location || 'United States'}</span>
+                                </div>
+                            </div>
+                            <h1 className="text-2xl md:text-3xl font-bold text-[#0F172A]">{prop.title}</h1>
+                        </div>
+                        <div className="flex items-center gap-2 bg-slate-50 px-4 py-2 rounded-lg border border-slate-100">
+                            <span className="text-slate-400 text-xs font-bold uppercase">Est. Yield</span>
+                            <span className="text-xl font-bold text-[#009B9E] flex items-center gap-1">
+                                <TrendingUp size={18} /> {prop.rental_yield || 0}%
+                            </span>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div className="container mx-auto px-4 -mt-10 relative z-10 grid lg:grid-cols-3 gap-8">
+            <div className="container mx-auto px-4 py-8 grid lg:grid-cols-3 gap-8">
 
-                {/* LEFT COLUMN */}
+                {/* --- SOL KOLON (GALERİ & DETAYLAR) --- */}
                 <div className="lg:col-span-2 space-y-8">
-                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 grid grid-cols-2 md:grid-cols-4 gap-6">
-                        <div>
-                            <span className="block text-xs text-slate-400 uppercase font-bold">Asset Value</span>
-                            <span className="text-xl font-bold text-[#0F172A]">${prop.price_usd.toLocaleString()}</span>
+
+                    {/* GALERİ COMPONENTİ */}
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                        <PropertyGallery images={images} propertyTitle={prop.title} />
+                    </div>
+
+                    {/* FİNANSAL ÖZET ŞERİDİ */}
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 grid grid-cols-2 md:grid-cols-4 gap-6 divide-x divide-slate-50">
+                        <div className="pl-2">
+                            <span className="block text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-1">Asset Value</span>
+                            <span className="text-lg md:text-xl font-bold text-[#0F172A]">${prop.price_usd.toLocaleString()}</span>
                         </div>
-                        <div>
-                            <span className="block text-xs text-slate-400 uppercase font-bold">Token Price</span>
-                            <span className="text-xl font-bold text-[#009B9E]">${tokenPrice.toFixed(2)}</span>
+                        <div className="pl-6">
+                            <span className="block text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-1">Token Price</span>
+                            <span className="text-lg md:text-xl font-bold text-[#009B9E]">${tokenPrice.toFixed(2)}</span>
                         </div>
-                        <div>
-                            <span className="block text-xs text-slate-400 uppercase font-bold">Est. Yield</span>
-                            <span className="text-xl font-bold text-green-600">10.5%</span>
+                        <div className="pl-6">
+                            <span className="block text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-1">Total Tokens</span>
+                            <span className="text-lg md:text-xl font-bold text-[#0F172A]">{prop.total_tokens.toLocaleString()}</span>
                         </div>
-                        <div>
-                            <span className="block text-xs text-slate-400 uppercase font-bold">Tokens Left</span>
-                            <span className="text-xl font-bold text-[#0F172A]">{prop.available_tokens}</span>
+                        <div className="pl-6">
+                            <span className="block text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-1">Available</span>
+                            <span className={`text-lg md:text-xl font-bold ${prop.available_tokens > 0 ? 'text-[#0F172A]' : 'text-red-500'}`}>
+                                {prop.available_tokens.toLocaleString()}
+                            </span>
                         </div>
                     </div>
 
+                    {/* AÇIKLAMA VE MADDELER */}
                     <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
-                        <h3 className="text-xl font-bold text-[#0F172A] mb-4 flex items-center gap-2"><FileText className="text-[#009B9E]" /> Investment Summary</h3>
-                        <p className="text-slate-600 leading-relaxed mb-6">{prop.description}</p>
+                        <h3 className="text-xl font-bold text-[#0F172A] mb-4 flex items-center gap-2">
+                            <FileText className="text-[#009B9E]" /> Investment Summary
+                        </h3>
+                        <p className="text-slate-600 leading-relaxed mb-8 text-sm md:text-base whitespace-pre-line">
+                            {prop.description}
+                        </p>
 
-                        <div className="mt-6 pt-6 border-t border-slate-100">
-                            <h4 className="font-bold text-[#0F172A] mb-3">Property Highlights</h4>
-                            <ul className="grid md:grid-cols-2 gap-3 text-sm text-slate-600">
-                                <li className="flex gap-2"><CheckCircle size={16} className="text-green-500" /> Fully Managed Property</li>
-                                <li className="flex gap-2"><CheckCircle size={16} className="text-green-500" /> Monthly Rent Payouts (BTC)</li>
-                                <li className="flex gap-2"><CheckCircle size={16} className="text-green-500" /> High Appreciation Potential</li>
-                                <li className="flex gap-2"><CheckCircle size={16} className="text-green-500" /> Secure LLC Structure</li>
+                        <div className="pt-6 border-t border-slate-100">
+                            <h4 className="font-bold text-[#0F172A] mb-4 text-sm uppercase tracking-wide">Property Highlights</h4>
+                            <ul className="grid md:grid-cols-2 gap-4 text-sm text-slate-600">
+                                <li className="flex gap-2.5 items-start"><CheckCircle size={18} className="text-[#009B9E] shrink-0 mt-0.5" /> Fully Managed Property</li>
+                                <li className="flex gap-2.5 items-start"><CheckCircle size={18} className="text-[#009B9E] shrink-0 mt-0.5" /> Weekly Rent Payouts</li>
+                                <li className="flex gap-2.5 items-start"><CheckCircle size={18} className="text-[#009B9E] shrink-0 mt-0.5" /> High Appreciation Potential</li>
+                                <li className="flex gap-2.5 items-start"><CheckCircle size={18} className="text-[#009B9E] shrink-0 mt-0.5" /> Legal Ownership via LLC</li>
                             </ul>
                         </div>
                     </div>
                 </div>
 
-                {/* RIGHT COLUMN: BUY CARD */}
+                {/* --- SAĞ KOLON (YATIRIM KARTI - STICKY) --- */}
                 <div className="lg:col-span-1">
-                    <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100 sticky top-24">
+                    <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100 sticky top-28">
                         <div className="mb-6">
                             <h3 className="text-xl font-bold text-[#0F172A]">Invest in this Asset</h3>
-                            <p className="text-slate-500 text-sm">Instant ownership via Bitcoin</p>
+                            <p className="text-slate-500 text-xs mt-1">Instant ownership via RealT Tokens</p>
                         </div>
 
-                        <div className="bg-slate-50 p-4 rounded-xl mb-6">
+                        <div className="bg-slate-50 p-4 rounded-xl mb-6 border border-slate-100">
                             <div className="flex justify-between mb-2">
-                                <span className="text-sm text-slate-500">Token Price</span>
+                                <span className="text-xs font-bold text-slate-500 uppercase">Token Price</span>
                                 <span className="font-bold text-[#0F172A]">${tokenPrice.toFixed(2)}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-sm text-slate-500">Available</span>
+                                <span className="text-xs font-bold text-slate-500 uppercase">Available</span>
                                 <span className="font-bold text-[#0F172A]">{prop.available_tokens}</span>
                             </div>
                         </div>
 
                         <div className="space-y-4">
                             <div>
-                                <label className="text-xs font-bold text-slate-500 uppercase">Amount (Tokens)</label>
-                                <input
-                                    type="number"
-                                    min="1"
-                                    max={prop.available_tokens}
-                                    value={buyAmount}
-                                    onChange={(e) => setBuyAmount(Number(e.target.value))}
-                                    className="w-full border border-slate-200 rounded-xl p-3 font-bold text-lg focus:ring-2 focus:ring-[#009B9E] outline-none"
-                                />
+                                <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Amount (Tokens)</label>
+                                <div className="relative">
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        max={prop.available_tokens}
+                                        value={buyAmount}
+                                        onChange={(e) => {
+                                            const val = Math.min(Math.max(1, Number(e.target.value)), prop.available_tokens);
+                                            setBuyAmount(val);
+                                        }}
+                                        className="w-full border border-slate-200 rounded-xl p-3 font-bold text-lg text-[#0F172A] focus:ring-2 focus:ring-[#009B9E] outline-none transition-all"
+                                    />
+                                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">Tokens</span>
+                                </div>
                             </div>
 
-                            <div className="flex justify-between items-center py-2">
-                                <span className="font-bold text-slate-500">Total Investment:</span>
+                            <div className="flex justify-between items-center py-2 border-t border-slate-50 mt-2">
+                                <span className="font-bold text-slate-500 text-sm">Total:</span>
                                 <span className="text-2xl font-bold text-[#009B9E]">${(buyAmount * tokenPrice).toFixed(2)}</span>
                             </div>
 
                             {!isAuthenticated && (
                                 <div className="bg-orange-50 border border-orange-200 p-3 rounded-lg flex gap-2 items-start text-xs text-orange-800 mb-2">
                                     <AlertCircle size={16} className="shrink-0 mt-0.5" />
-                                    <span>You must be logged in to make an investment.</span>
+                                    <span>You must be logged in to invest.</span>
                                 </div>
                             )}
 
                             <button
                                 onClick={handleBuy}
-                                disabled={isSubmitting}
-                                className="w-full bg-[#009B9E] hover:bg-[#008B8E] text-white font-bold py-4 rounded-xl transition shadow-lg shadow-teal-500/20 flex justify-center gap-2"
+                                disabled={isSubmitting || prop.available_tokens === 0}
+                                className={`w-full font-bold py-4 rounded-xl transition-all shadow-lg flex justify-center gap-2 ${isSubmitting || prop.available_tokens === 0
+                                        ? 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'
+                                        : 'bg-[#009B9E] hover:bg-[#008B8E] text-white shadow-teal-500/20 hover:-translate-y-0.5'
+                                    }`}
                             >
                                 {isSubmitting ? <Loader2 className="animate-spin" /> : (isAuthenticated ? 'Confirm Investment' : 'Login to Invest')}
                             </button>
+
+                            <div className="text-center">
+                                <span className="text-[10px] text-slate-400">Secure transaction via TerraVest</span>
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -117,7 +117,10 @@ export default function Navbar() {
                         {user ? (
                             <div className="flex items-center gap-4">
                                 <div className="relative group">
-                                    <div className="flex items-center gap-3 bg-white/5 px-4 py-1.5 rounded-full border border-white/10 hover:border-[#009B9E]/50 transition cursor-default">
+                                    <div
+                                        className="flex items-center gap-3 bg-white/5 px-4 py-1.5 rounded-full border border-white/10 hover:border-[#009B9E]/50 transition cursor-default"
+                                        data-testid="header-balance"
+                                    >
                                         <div className="flex flex-col items-end leading-none">
                                             <span className="text-[10px] text-slate-400 font-bold uppercase">Balance</span>
                                             <div className="flex items-center gap-1.5">
@@ -137,6 +140,7 @@ export default function Navbar() {
                                             onClick={() => setIsDepositOpen(true)}
                                             className="bg-[#009B9E] hover:bg-[#00888a] text-white p-1.5 rounded-full transition shadow-lg shadow-[#009B9E]/20"
                                             title="Deposit Funds"
+                                            data-testid="deposit-button"
                                         >
                                             <Plus size={16} strokeWidth={3} />
                                         </button>
@@ -207,6 +211,7 @@ export default function Navbar() {
                                     <button
                                         onClick={() => { setIsDepositOpen(true); setMobileMenuOpen(false); }}
                                         className="bg-[#009B9E] text-white px-4 py-2 rounded-lg font-bold text-sm shadow-lg shadow-[#009B9E]/20"
+                                        data-testid="deposit-button"
                                     >
                                         + Deposit
                                     </button>

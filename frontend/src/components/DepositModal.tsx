@@ -63,14 +63,17 @@ export default function DepositModal({ onClose, onSuccess }: DepositModalProps) 
 
         setIsLoading(true);
         try {
-            console.log(`📡 İstek gönderiliyor... User ID: ${user.id}, Tutar: ${usdAmount}`);
+            console.log(`📡 İstek gönderiliyor... Tutar: ${usdAmount}`);
 
-            // ⚠️ Backend Adresine Dikkat (127.0.0.1:8787)
+            // 🔐 Auth token'dan userId alınacak, body'den göndermeye gerek yok
+            const token = localStorage.getItem('token');
             const res = await fetch('http://127.0.0.1:8787/api/deposit', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                },
                 body: JSON.stringify({
-                    userId: user.id, // ✅ Artık user tanımlı
                     amount: usdAmount
                 })
             });
@@ -160,6 +163,7 @@ export default function DepositModal({ onClose, onSuccess }: DepositModalProps) 
                         type="submit"
                         disabled={isLoading || !amount || parseFloat(amount) < 10}
                         className="w-full bg-[#0F172A] hover:bg-slate-800 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all transform active:scale-[0.98]"
+                        data-testid="deposit-submit-button"
                     >
                         {isLoading ? (
                             <>

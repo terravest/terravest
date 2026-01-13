@@ -45,7 +45,12 @@ export default function PaymentModal({ order, onClose, onSuccess }: PaymentModal
         const checkStatus = async () => {
             try {
                 if (!depositId) return;
-                const res = await fetch(`http://127.0.0.1:8787/api/deposit/${depositId}`);
+                const token = localStorage.getItem('token');
+                const res = await fetch(`http://127.0.0.1:8787/api/deposit/${depositId}`, {
+                    headers: {
+                        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                    }
+                });
                 const data = await res.json();
 
                 if (data.success && data.data.status === 'completed') {

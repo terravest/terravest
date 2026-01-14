@@ -150,7 +150,7 @@ app.get('/', (c) => {
 	});
 });
 
-app.get('/health', (c) => c.json({ status: 'ok', env: c.env.ENVIRONMENT }));
+app.get('/api/health', (c) => c.json({ status: 'ok', env: c.env.ENVIRONMENT }));
 
 // ==========================================
 // TEST ROUTES

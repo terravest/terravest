@@ -1,3 +1,5 @@
+console.log("🚀 SÜRÜM KONTROL: v_FINAL_FIX_001");
+
 import { useState, useEffect } from 'react';
 import { X, Copy, CheckCircle, ExternalLink, Loader2, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';

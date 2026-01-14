@@ -1,6 +1,7 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 
-interface User {
+// User tipi
+export interface User {
     id: number;
     email: string;
     username: string;
@@ -9,25 +10,34 @@ interface User {
     created_at?: string;
 }
 
+// Context tipi
 interface AuthContextType {
     user: User | null;
     token: string | null;
-    login: (token: string, user: User) => void;
+    // login artık rememberMe parametresini de alıyor
+    login: (token: string, user: User, rememberMe: boolean) => void;
     logout: () => void;
     refreshUser: () => Promise<void>;
     isAuthenticated: boolean;
+    isLoading: boolean; // ✅ EKLENDİ: AdminRoute hatasını çözmek için
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
-    const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
+
+    // 1. Başlangıçta her iki depolama alanını da kontrol et
+    const [token, setToken] = useState<string | null>(
+        localStorage.getItem('token') || sessionStorage.getItem('token')
+    );
+
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const initAuth = async () => {
-            const storedToken = localStorage.getItem('token');
+            // Token nerede varsa oradan al
+            const storedToken = localStorage.getItem('token') || sessionStorage.getItem('token');
 
             if (storedToken) {
                 try {
@@ -42,18 +52,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                         setUser(userData);
                         setToken(storedToken);
                     } else {
-                        // 🚨 KRİTİK DÜZELTME: Sadece 401 (Yetkisiz) ise çıkış yap
-                        // Sunucu hatası (500) veya başka bir şeyse oturumu kapatma.
+                        // Sadece yetki hatalarında (401/403) çıkış yap
                         if (res.status === 401 || res.status === 403) {
-                            console.warn("🔒 Token süresi dolmuş, çıkış yapılıyor.");
-                            logout();
-                        } else {
-                            console.warn(`⚠️ Sunucu yanıt vermedi (${res.status}), ama oturum kapatılmadı.`);
+                            console.warn("🔒 Oturum süresi doldu.");
+                            // Logout işlemini manuel yapıyoruz çünkü fonksiyon scope dışı
+                            localStorage.removeItem('token');
+                            sessionStorage.removeItem('token');
+                            setToken(null);
+                            setUser(null);
                         }
                     }
                 } catch (error) {
-                    console.error("🔥 Bağlantı hatası:", error);
-                    // İnternet koptuğunda kullanıcıyı atmayalım
+                    console.error("🔥 Bağlantı hatası (Auth):", error);
                 }
             }
             setLoading(false);
@@ -62,14 +72,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         initAuth();
     }, []);
 
-    const login = (newToken: string, newUser: User) => {
-        localStorage.setItem('token', newToken);
+    // 2. Login fonksiyonu: Remember Me seçimine göre kayıt yeri belirler
+    const login = (newToken: string, newUser: User, rememberMe: boolean) => {
+        if (rememberMe) {
+            localStorage.setItem('token', newToken);     // Kalıcı
+            sessionStorage.removeItem('token');          // Çakışmayı önle
+        } else {
+            sessionStorage.setItem('token', newToken);   // Geçici (Sekme kapanınca gider)
+            localStorage.removeItem('token');            // Çakışmayı önle
+        }
+
         setToken(newToken);
         setUser(newUser);
     };
 
+    // 3. Logout: Her yerden sil
     const logout = () => {
         localStorage.removeItem('token');
+        sessionStorage.removeItem('token');
         setToken(null);
         setUser(null);
     };
@@ -85,12 +105,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 setUser(userData);
             }
         } catch (error) {
-            console.error("Kullanıcı yenilenemedi", error);
+            console.error("Kullanıcı verisi yenilenemedi", error);
         }
     };
 
     return (
-        <AuthContext.Provider value={{ user, token, login, logout, refreshUser, isAuthenticated: !!user }}>
+        <AuthContext.Provider value={{
+            user,
+            token,
+            login,
+            logout,
+            refreshUser,
+            isAuthenticated: !!user,
+            isLoading: loading // ✅ State dışarıya verildi
+        }}>
+            {/* Loading sırasında boş ekran veya spinner dönebiliriz, 
+                şimdilik sadece yükleme bitince çocukları gösteriyoruz */}
             {!loading && children}
         </AuthContext.Provider>
     );

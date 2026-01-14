@@ -10,7 +10,9 @@ export const RegisterSchema = z.object({
 // --- LOGIN SCHEMA ---
 export const LoginSchema = z.object({
     identifier: z.string().min(1, { message: "Email or Username is required" }),
-    password: z.string().min(1, { message: "Password is required" })
+    password: z.string().min(1, { message: "Password is required" }),
+    turnstileToken: z.string().optional(),
+    rememberMe: z.boolean().optional()
 });
 
 // --- BUY ORDER SCHEMA ---

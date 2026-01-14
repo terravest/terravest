@@ -42,10 +42,11 @@ export const handleSell = async (request: Request, env: Env) => {
         // Atomic transaction operations
         const queries = [];
 
-        // Decrease investment token amount
+        // SECURITY FIX: Decrease investment token amount WITH condition to prevent negative amounts
+        // This prevents race conditions where two concurrent requests could both pass the initial check
         queries.push(
-            db.prepare("UPDATE investments SET token_amount = token_amount - ?, total_invested = COALESCE(total_invested, 0) - ? WHERE id = ?")
-                .bind(token_amount, rawReturn, investment.id)
+            db.prepare("UPDATE investments SET token_amount = token_amount - ?, total_invested = COALESCE(total_invested, 0) - ? WHERE id = ? AND token_amount >= ?")
+                .bind(token_amount, rawReturn, investment.id, token_amount)
         );
 
         // Increase property token stock
@@ -60,8 +61,21 @@ export const handleSell = async (request: Request, env: Env) => {
 
         await db.batch(queries);
 
+        // SECURITY FIX: Verify the investment was actually updated (prevent race conditions)
+        const verifyInvestment = await db.prepare("SELECT token_amount FROM investments WHERE id = ?").bind(investment.id).first();
+        if (!verifyInvestment || (verifyInvestment.token_amount as number) < 0) {
+            // Rollback: reverse all operations
+            await db.batch([
+                db.prepare("UPDATE investments SET token_amount = token_amount + ?, total_invested = COALESCE(total_invested, 0) + ? WHERE id = ?")
+                    .bind(token_amount, rawReturn, investment.id),
+                db.prepare("UPDATE properties SET available_tokens = available_tokens - ? WHERE id = ?").bind(token_amount, property_id),
+                db.prepare("UPDATE users SET usd_balance = usd_balance - ? WHERE id = ?").bind(netReturn, user.id)
+            ]);
+            return errorResponse("Insufficient tokens (race condition detected). Please try again.", 409);
+        }
+
         // Clean up: delete investment record if amount reaches zero
-        if ((investment.token_amount as number) - token_amount <= 0) {
+        if ((verifyInvestment.token_amount as number) <= 0) {
             await db.prepare("DELETE FROM investments WHERE id = ?").bind(investment.id).run();
         }
 

@@ -120,10 +120,10 @@ export const handleAdminOperations = async (request: Request, env: Env): Promise
             // Convert values to numbers
             const amountToAdd = Number(deposit.amount_usd);
 
-            // Atomic transaction (batch)
+            // SECURITY FIX: Atomic transaction with status check to prevent double processing
             await db.batch([
-                // Update deposit status
-                db.prepare("UPDATE deposits SET status = 'completed', updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(depositId),
+                // Update deposit status ONLY if still pending (prevents race conditions)
+                db.prepare("UPDATE deposits SET status = 'completed', updated_at = CURRENT_TIMESTAMP WHERE id = ? AND status = 'pending'").bind(depositId),
 
                 // Increase user balance
                 db.prepare(`
@@ -132,6 +132,12 @@ export const handleAdminOperations = async (request: Request, env: Env): Promise
                     WHERE id = ?
                 `).bind(amountToAdd, deposit.user_id)
             ]);
+
+            // Verify the deposit was actually updated
+            const verifyDeposit = await db.prepare("SELECT status FROM deposits WHERE id = ?").bind(depositId).first();
+            if (verifyDeposit?.status !== 'completed') {
+                return errorResponse("Deposit was already processed by another request", 409);
+            }
 
             return json({
                 success: true,

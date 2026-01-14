@@ -3,8 +3,8 @@ import Navbar from '../components/Navbar';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../lib/api';
 import {
-    Bell, Lock, Shield, Moon, User, Mail,
-    Smartphone, CheckCircle, Save, Loader2, Wallet, AlertTriangle
+    Bell, Lock, Shield, Mail,
+    CheckCircle, Save, Loader2, Wallet, AlertTriangle
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 

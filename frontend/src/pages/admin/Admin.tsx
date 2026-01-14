@@ -13,7 +13,6 @@ export default function Admin() {
     const [orders, setOrders] = useState<any[]>([]);
     const [properties, setProperties] = useState<any[]>([]);
     const [withdrawals, setWithdrawals] = useState<any[]>([]);
-    const [loading, setLoading] = useState(false);
 
     // UI States
     const [approveModalOpen, setApproveModalOpen] = useState(false);
@@ -28,13 +27,12 @@ export default function Admin() {
 
     // Fetch Data
     const fetchData = async () => {
-        setLoading(true);
         try {
             if (activeTab === 'orders') {
                 const data = await api.getAdminOrders();
                 setOrders(Array.isArray(data) ? data : (data.results || []));
             } else if (activeTab === 'properties') {
-                const data = await api.getAdminProperties();
+                const data = await api.getProperties();
                 setProperties(Array.isArray(data) ? data : (data.results || []));
             } else if (activeTab === 'withdrawals') {
                 const data = await api.getAdminSellRequests(); // Bu fonksiyon api.ts'de tanımlı olmalı
@@ -42,8 +40,6 @@ export default function Admin() {
             }
         } catch (error) {
             console.error(error);
-        } finally {
-            setLoading(false);
         }
     };
 

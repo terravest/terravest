@@ -11,7 +11,7 @@ interface Withdrawal {
     email: string;    // LEFT JOIN'den geliyor
     amount: number;   // DİKKAT: Veritabanında artık 'amount' oldu
     address: string;
-    status: 'pending' | 'approved' | 'rejected';
+    status: 'pending' | 'approved' | 'rejected' | 'completed';
     tx_hash?: string;
     created_at: string;
 }

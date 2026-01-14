@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
-import { ArrowRight, Building2, TrendingUp, ShieldCheck, Users, Wallet } from 'lucide-react';
+import { ArrowRight, Building2, TrendingUp, ShieldCheck, Wallet } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function Home() {

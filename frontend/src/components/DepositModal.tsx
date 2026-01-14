@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { X, Bitcoin, Loader2, ArrowRight, RefreshCw, AlertCircle } from 'lucide-react';
-import { api } from '../lib/api';
 import toast from 'react-hot-toast';
 import PaymentModal from './PaymentModal';
 import { useAuth } from '../context/AuthContext';

@@ -5,59 +5,121 @@ import { RegisterSchema, LoginSchema } from "../lib/validators";
 import { requireAuth } from "../lib/auth";
 import { json, validationError, errorResponse } from "../lib/errors";
 
+
+async function verifyTurnstile(token: string, secretKey: string, ip: string) {
+    const formData = new FormData();
+    formData.append('secret', secretKey);
+    formData.append('response', token);
+    formData.append('remoteip', ip);
+
+    const url = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
+    const result = await fetch(url, {
+        body: formData,
+        method: 'POST',
+    });
+
+    const outcome = await result.json() as any;
+    return outcome.success;
+}
+
 /* =========================
    REGISTER
 ========================= */
-export async function handleRegister(request: Request, env: Env): Promise<Response> {
+export const handleRegister = async (request: Request, env: Env) => {
     try {
         const body = await request.json();
-        const validation = RegisterSchema.safeParse(body);
 
+        // 1. Validasyon
+        const validation = RegisterSchema.safeParse(body);
         if (!validation.success) {
             return validationError(validation.error);
         }
 
-        const { email, username, password } = validation.data;
+        const { email, password, username } = validation.data;
 
-        // Check if user already exists
+        // 2. Kullanıcı var mı kontrolü
         const existingUser = await env.terravest_db
-            .prepare("SELECT id, email, username FROM users WHERE email = ? OR username = ?")
+            .prepare('SELECT id FROM users WHERE email = ? OR username = ?')
             .bind(email, username)
             .first();
 
         if (existingUser) {
-            const errorMsg = existingUser.email === email ? "Email already registered" : "Username already taken";
-            return errorResponse(errorMsg, 409);
+            return errorResponse("Email or username already exists", 409);
         }
 
-        // Hash password with bcrypt (10 rounds - secure and performant)
+        // 3. Şifreleme ve Kayıt
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        const role = "user";
-
         const result = await env.terravest_db
-            .prepare(`INSERT INTO users (email, username, password, role, usd_balance) VALUES (?, ?, ?, ?, 0)`)
-            .bind(email, username, hashedPassword, role)
+            .prepare('INSERT INTO users (email, username, password, role) VALUES (?, ?, ?, ?)')
+            .bind(email, username, hashedPassword, 'user')
             .run();
 
-        if (!result.success) return errorResponse("Failed to register user", 500);
+        if (!result.success) {
+            return errorResponse("Failed to register user", 500);
+        }
 
+        const newUserId = result.meta.last_row_id;
+
+        // Token üret (24 saatlik - Register sonrası "Beni Hatırla" varsayılan false kabul edilir)
+        const token = await jwt.sign({
+            id: newUserId,
+            email: email,
+            username: username,
+            role: 'user',
+            exp: Math.floor(Date.now() / 1000) + 24 * 60 * 60 // 24 Saat
+        }, env.JWT_SECRET);
+
+        // Cevap olarak Token dönüyoruz
         return json({
-            message: "User registered successfully",
-            user: { email, username, role, usd_balance: 0 }
+            success: true,
+            token,
+            user: {
+                id: newUserId,
+                email,
+                username,
+                role: 'user',
+                usd_balance: 0
+            }
         }, 201);
 
     } catch (e: any) {
-        return errorResponse(e.message || "Internal server error", 500);
+        return json({ error: e.message }, 500);
     }
-}
+};
 
 /* =========================
    LOGIN
 ========================= */
 export async function handleLogin(request: Request, env: Env): Promise<Response> {
     try {
-        const body = await request.json();
+        // Body'yi "any" olarak alıyoruz ki turnstileToken ve rememberMe'ye erişebilelim
+        // (LoginSchema bu alanları bilmiyorsa hata vermesin diye)
+        const body = await request.json() as any;
+
+        // ---------------------------------------------------------
+        // 🛡️ GÜVENLİK ADIMI: TURNSTILE KONTROLÜ
+        // ---------------------------------------------------------
+        const turnstileToken = body.turnstileToken;
+        const ip = request.headers.get('CF-Connecting-IP') || "127.0.0.1";
+
+        // Secret Key yoksa (Dev ortamı) veya Token boşsa kontrol
+        if (env.TURNSTILE_SECRET) {
+            if (!turnstileToken) {
+                return errorResponse("Security check required. Please refresh.", 400);
+            }
+
+            const isHuman = await verifyTurnstile(turnstileToken, env.TURNSTILE_SECRET, ip);
+
+            if (!isHuman) {
+                return errorResponse("Security check failed. Are you a robot?", 403);
+            }
+        } else {
+            console.warn("⚠️ TURNSTILE_SECRET not set. Skipping bot check.");
+        }
+        // ---------------------------------------------------------
+
+        // Normal Validasyon (Zod)
         const validation = LoginSchema.safeParse(body);
 
         if (!validation.success) {
@@ -66,13 +128,13 @@ export async function handleLogin(request: Request, env: Env): Promise<Response>
 
         const { identifier, password } = validation.data;
 
-        // Fetch user including password field for verification
+        // Fetch user
         const user = await env.terravest_db
             .prepare(`
-    SELECT id, email, username, password, role, usd_balance
-    FROM users
-    WHERE email = ? OR username = ?
-  `)
+                SELECT id, email, username, password, role, usd_balance
+                FROM users
+                WHERE email = ? OR username = ?
+            `)
             .bind(identifier, identifier)
             .first();
 
@@ -80,7 +142,7 @@ export async function handleLogin(request: Request, env: Env): Promise<Response>
             return errorResponse("Invalid credentials", 401);
         }
 
-        // Verify password by comparing with hashed password
+        // Verify password
         const isPasswordValid = await bcrypt.compare(password, user.password as string);
         if (!isPasswordValid) {
             return errorResponse("Invalid credentials", 401);
@@ -88,13 +150,23 @@ export async function handleLogin(request: Request, env: Env): Promise<Response>
 
         const safeBalance = user.usd_balance == null ? 0 : Number(user.usd_balance);
 
+        // ---------------------------------------------------------
+        // 🕒 TOKEN SÜRESİ (REMEMBER ME)
+        // ---------------------------------------------------------
+        const rememberMe = body.rememberMe || false; // Frontend'den gelen değer
+
+        // Beni hatırla varsa 7 gün, yoksa 2 saat
+        const expirationTime = rememberMe
+            ? Math.floor(Date.now() / 1000) + (60 * 60 * 24 * 7)
+            : Math.floor(Date.now() / 1000) + (60 * 60 * 2);
+
         // Generate JWT token
         const token = await jwt.sign({
             id: user.id,
             email: user.email,
             username: user.username,
             role: user.role,
-            exp: Math.floor(Date.now() / 1000) + 24 * 60 * 60 // 24 saat
+            exp: expirationTime
         }, env.JWT_SECRET);
 
         return json({

@@ -48,16 +48,31 @@ export async function processPendingDeposits(env: Env) {
             // 4. Payment Detected! Complete the transaction
             console.log(`💰 PAYMENT DETECTED! ID: ${depositId}, Received: ${receivedSatoshis} sats`);
 
+            // SECURITY FIX: Check if deposit is still pending before processing
+            // This prevents double-crediting if cron runs multiple times
+            const currentDeposit = await db.prepare("SELECT status FROM deposits WHERE id = ?").bind(depositId).first();
+            if (currentDeposit?.status !== 'pending') {
+                console.warn(`⚠️ Deposit ${depositId} is already ${currentDeposit?.status}. Skipping to prevent double credit.`);
+                continue;
+            }
+
             // Start Transaction: Update deposit status AND add balance to user
             await db.batch([
-                // A. Mark deposit as 'completed'
-                db.prepare("UPDATE deposits SET status = 'completed', updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(depositId),
+                // A. Mark deposit as 'completed' ONLY if still pending (prevents double processing)
+                db.prepare("UPDATE deposits SET status = 'completed', updated_at = CURRENT_TIMESTAMP WHERE id = ? AND status = 'pending'").bind(depositId),
 
                 // B. Add USD balance to user
                 // NOTE: Ideally, convert received BTC to USD here. 
                 // For MVP, we credit the declared USD amount.
                 db.prepare("UPDATE users SET usd_balance = usd_balance + ? WHERE id = ?").bind(amountUSD, userId)
             ]);
+
+            // Verify the deposit was actually updated (another instance might have processed it)
+            const verifyDeposit = await db.prepare("SELECT status FROM deposits WHERE id = ?").bind(depositId).first();
+            if (verifyDeposit?.status !== 'completed') {
+                console.warn(`⚠️ Deposit ${depositId} was already processed by another instance. Balance credit may have been skipped.`);
+                continue;
+            }
 
             console.log(`✅ ID ${depositId} completed and balance updated.`);
 

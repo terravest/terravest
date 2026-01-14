@@ -47,9 +47,8 @@ export default function PropertyDetails() {
         setIsSubmitting(true);
         try {
             await api.createOrder({
-                property_id: prop.id,
-                token_amount: buyAmount,
-                payment_address: "manual-btc-transfer"
+                propertyId: prop.id,
+                tokenAmount: buyAmount,
             });
 
             alert("Order Request Created! Please go to Dashboard to complete payment.");
@@ -111,7 +110,7 @@ export default function PropertyDetails() {
                             <span className="text-xl font-bold text-[#009B9E] flex items-center gap-1">
                                 <TrendingUp size={18} />{' '}
                                 {prop.rental_yield ? (
-                                    prop.rental_yield.includes('%') 
+                                    prop.rental_yield.includes('%')
                                         ? prop.rental_yield
                                         : `${prop.rental_yield}%`
                                 ) : 'N/A'}
@@ -228,8 +227,8 @@ export default function PropertyDetails() {
                                 onClick={handleBuy}
                                 disabled={isSubmitting || prop.available_tokens === 0}
                                 className={`w-full font-bold py-4 rounded-xl transition-all shadow-lg flex justify-center gap-2 ${isSubmitting || prop.available_tokens === 0
-                                        ? 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'
-                                        : 'bg-[#009B9E] hover:bg-[#008B8E] text-white shadow-teal-500/20 hover:-translate-y-0.5'
+                                    ? 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'
+                                    : 'bg-[#009B9E] hover:bg-[#008B8E] text-white shadow-teal-500/20 hover:-translate-y-0.5'
                                     }`}
                             >
                                 {isSubmitting ? <Loader2 className="animate-spin" /> : (isAuthenticated ? 'Confirm Investment' : 'Login to Invest')}

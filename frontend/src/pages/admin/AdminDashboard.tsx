@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react';
 import {
-    CheckCircle, ExternalLink, RefreshCw, X, AlertCircle, Loader2,
+    RefreshCw, X, AlertCircle, Loader2,
     ArrowDownLeft, ArrowUpRight, Hash, Copy, Clipboard
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api } from '../../lib/api';
-import Navbar from '../../components/Navbar';
 import AdminNavbar from '../../components/AdminNavbar';
 
 // --- TİP TANIMLARI ---
@@ -27,7 +26,7 @@ interface Withdrawal {
     email: string;
     amount: number;
     address: string;
-    status: 'pending' | 'approved' | 'rejected';
+    status: 'pending' | 'approved' | 'rejected' | 'completed';
     tx_hash?: string;
     created_at: string;
 }
@@ -223,7 +222,7 @@ export default function AdminDashboard() {
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    {w.status === 'approved' || w.status === 'completed' ?
+                                                    {w.status === 'completed' ?
                                                         <span className="bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-bold">Paid</span> :
                                                         <span className="bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full text-xs font-bold animate-pulse">Action Needed</span>
                                                     }

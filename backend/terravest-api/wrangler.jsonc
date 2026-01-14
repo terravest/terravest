@@ -9,13 +9,21 @@
 	"observability": {
 		"enabled": true
 	},
+	// ==========================================
+	// 🌍 ENVIRONMENT VARIABLES (PRODUCTION)
+	// ==========================================
+	// Bu değişkenler sadece "wrangler deploy" dediğinde (Canlıda) geçerlidir.
+	// Localde çalışırken ".dev.vars" dosyası kullanılır.
+	"vars": {
+		"ENVIRONMENT": "production", // Hata detaylarını gizlemek için (Secure Error Handling)
+		"FRONTEND_URL": "https://terravest-frontend.pages.dev" // ⚠️ DİKKAT: Buraya Frontend'inin gerçek canlı adresini yazmalısın!
+	},
 	"d1_databases": [
 		{
 			"binding": "terravest_db",
 			"database_name": "terravest-db",
 			"database_id": "c18f2c05-572c-465f-9b91-7d11d3928e70"
-		},
-
+		}
 	],
 	// Scheduled tasks:
 	// */10 * * * * -> Payment check every 10 minutes
@@ -26,10 +34,10 @@
 			"0 1 * * *"
 		]
 	},
-	// R2 Bucket Bağlantısı (Düzeltildi)
+	// R2 Bucket Bağlantısı
 	"r2_buckets": [
 		{
-			"binding": "TERRAVEST_BUCKET", // Kod içindeki Env interface'i ile aynı olmalı
+			"binding": "TERRAVEST_BUCKET",
 			"bucket_name": "terravest-images",
 			"preview_bucket_name": "terravest-images"
 		}

@@ -7,7 +7,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'; // ✅ useQuer
 import {
     TrendingUp, Loader2,
     ArrowDownCircle, X, DollarSign,
-    User, Lock, Mail, LogOut, Settings, Wallet, PieChart, ArrowUpRight, AlertTriangle, Calculator
+    User, Lock, Mail, LogOut, Settings, Wallet, PieChart, ArrowUpRight, Calculator
 } from 'lucide-react';
 import PaymentModal from '../components/PaymentModal';
 import TransactionHistory from '../components/TransactionHistory';

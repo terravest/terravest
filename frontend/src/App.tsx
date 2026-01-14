@@ -1,69 +1,79 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'; // Navigate gereksizse sildim
+import { Suspense, lazy } from 'react'; // 1. Suspense ve lazy eklendi
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
 
 // COMPONENTS
+// AdminRoute genelde küçük bir wrapper olduğu için statik kalabilir, 
+// ama sayfalar kesinlikle lazy olmalı.
 import AdminRoute from './components/AdminRoute';
-// import Navbar from './components/Navbar'; 
 
-// PAGES (General)
-import Home from './pages/Home';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import Settings from './pages/Settings';
-import Dashboard from './pages/Dashboard';
-import Marketplace from './pages/Marketplace';
-import PropertyDetails from './pages/PropertyDetails';
+// 2. LAZY IMPORTS (Sayfalar sadece ihtiyaç duyulunca yüklenir)
+const Home = lazy(() => import('./pages/Home'));
+const Login = lazy(() => import('./pages/Login'));
+const Register = lazy(() => import('./pages/Register'));
+const Settings = lazy(() => import('./pages/Settings'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Marketplace = lazy(() => import('./pages/Marketplace'));
+const PropertyDetails = lazy(() => import('./pages/PropertyDetails'));
 
-// PAGES (Admin)
-// import Admin from './pages/admin/Admin'; // Eğer Admin.tsx layout değilse gerek yok
-import AdminDashboard from './pages/admin/AdminDashboard'; // Depositler burada
-import AdminWithdrawals from './pages/admin/AdminWithdrawals'; // Çekimler burada
-import Properties from './pages/admin/Properties'; // Property yönetimi
+// PAGES (Admin) - Lazy Load
+const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
+const AdminWithdrawals = lazy(() => import('./pages/admin/AdminWithdrawals'));
+const Properties = lazy(() => import('./pages/admin/Properties'));
 
-// ❌ SİLİNDİ: import AdminDeposits from './pages/admin/AdminDeposits'; 
+// 3. LOADING COMPONENT (Yükleme sırasında dönecek spinner)
+const PageLoader = () => (
+  <div className="min-h-screen flex items-center justify-center bg-[#0F172A]">
+    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00E5FF]"></div>
+  </div>
+);
 
 function App() {
   return (
     <AuthProvider>
       <Router>
         {/* Notification Toasts */}
-        <Toaster position="top-right" />
+        <Toaster position="top-right" toastOptions={{
+          style: { background: '#1E293B', color: '#fff', border: '1px solid #334155' },
+        }} />
 
-        <Routes>
-          {/* --- PUBLIC / USER ROUTES --- */}
-          <Route path="/" element={<Home />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
+        {/* 4. SUSPENSE WRAPPER (Tüm rotaları sarar) */}
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            {/* --- PUBLIC / USER ROUTES --- */}
+            <Route path="/" element={<Home />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
 
-          {/* USER DASHBOARD */}
-          <Route path="/dashboard" element={<Dashboard />} />
+            {/* USER DASHBOARD */}
+            <Route path="/dashboard" element={<Dashboard />} />
 
-          {/* SETTINGS & MARKETPLACE */}
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/marketplace" element={<Marketplace />} />
-          <Route path="/properties/:id" element={<PropertyDetails />} />
+            {/* SETTINGS & MARKETPLACE */}
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/marketplace" element={<Marketplace />} />
+            <Route path="/properties/:id" element={<PropertyDetails />} />
 
-          {/* --- PROTECTED ADMIN ROUTES --- */}
-          <Route element={<AdminRoute />}>
+            {/* --- PROTECTED ADMIN ROUTES --- */}
+            <Route element={<AdminRoute />}>
 
-            {/* 1. Admin Ana Sayfa -> Para Yatırma (Deposit) Yönetimi */}
-            <Route path="/admin" element={<AdminDashboard />} />
-            <Route path="/admin/dashboard" element={<AdminDashboard />} />
-            <Route path="/admin/deposits" element={<AdminDashboard />} />
+              {/* 1. Admin Ana Sayfa -> Para Yatırma (Deposit) Yönetimi */}
+              <Route path="/admin" element={<AdminDashboard />} />
+              <Route path="/admin/dashboard" element={<AdminDashboard />} />
+              <Route path="/admin/deposits" element={<AdminDashboard />} />
 
-            {/* 2. Para Çekme (Withdrawal) Yönetimi */}
-            {/* Düzeltme: Başına /admin eklendi */}
-            <Route path="/admin/withdrawals" element={<AdminWithdrawals />} />
+              {/* 2. Para Çekme (Withdrawal) Yönetimi */}
+              <Route path="/admin/withdrawals" element={<AdminWithdrawals />} />
 
-            {/* 3. Property Yönetimi */}
-            <Route path="/admin/properties" element={<Properties />} />
+              {/* 3. Property Yönetimi */}
+              <Route path="/admin/properties" element={<Properties />} />
 
-          </Route>
+            </Route>
 
-          {/* --- 404 (Not Found) --- */}
-          <Route path="*" element={<div className="p-10 text-center text-slate-500">404 - Page Not Found</div>} />
-        </Routes>
+            {/* --- 404 (Not Found) --- */}
+            <Route path="*" element={<div className="min-h-screen flex items-center justify-center text-slate-500">404 - Page Not Found</div>} />
+          </Routes>
+        </Suspense>
       </Router>
     </AuthProvider>
   );

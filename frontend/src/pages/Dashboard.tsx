@@ -12,21 +12,22 @@ import {
 import PaymentModal from '../components/PaymentModal';
 import TransactionHistory from '../components/TransactionHistory';
 import toast from 'react-hot-toast';
+import { API_BASE_URL } from '../config/api';
 
 export default function Dashboard() {
     const { user, logout, refreshUser } = useAuth();
     const navigate = useNavigate();
-    const queryClient = useQueryClient(); // ✅ Query Client başlatıldı
+    const queryClient = useQueryClient(); // ✅ Query Client initialized
     const [activeTab, setActiveTab] = useState<'portfolio' | 'settings'>('portfolio');
 
-    // --- 🔒 GÜVENLİK KONTROLÜ (REDIRECT) ---
+    // --- 🔒 SECURITY CHECK (REDIRECT) ---
     useEffect(() => {
         if (!user) {
             navigate('/login');
         }
     }, [user, navigate]);
 
-    // Kullanıcı verisi henüz yüklenmediyse loading göster
+    // Show loading if user data hasn't loaded yet
     if (!user) {
         return <div className="min-h-screen flex items-center justify-center bg-[#F9F7F3]"><Loader2 className="animate-spin text-[#009B9E]" size={40} /></div>;
     }
@@ -74,7 +75,7 @@ export default function Dashboard() {
     const pendingRewards = data?.assets?.reduce((acc: number, asset: any) => acc + (asset.unclaimed_rewards || 0), 0) || 0;
     const totalNetWorth = cashBalance + assetsValue + pendingRewards;
 
-    // --- FEE HESAPLAMA MANTIĞI ---
+    // --- FEE CALCULATION LOGIC ---
     const wAmount = parseFloat(withdrawAmount) || 0;
     const wFee = 5 + (wAmount * 0.01); // $5 + %1
     const wNet = wAmount > 0 ? wAmount - wFee : 0;
@@ -130,9 +131,8 @@ export default function Dashboard() {
         setIsProcessing(true);
         try {
             const token = localStorage.getItem('token');
-            const apiUrl = import.meta.env.VITE_API_URL || "http://127.0.0.1:8787/api";
 
-            const res = await fetch(`${apiUrl}/withdraw`, {
+            const res = await fetch(`${API_BASE_URL}/withdraw`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({ amount, btc_address: withdrawAddress })
@@ -142,14 +142,14 @@ export default function Dashboard() {
 
             toast.success("Withdrawal request submitted! Pending Admin Approval.");
 
-            // ✅ BAŞARILI OLUNCA:
+            // ✅ ON SUCCESS:
             setWithdrawModalOpen(false);
             setWithdrawAmount('');
             setWithdrawAddress('');
 
-            // 1. Kullanıcı bakiyesini güncelle
+            // 1. Update user balance
             if (refreshUser) refreshUser();
-            // 2. İşlem Geçmişi tablosunu yenilemeye zorla!
+            // 2. Force refresh Transaction History table!
             queryClient.invalidateQueries({ queryKey: ['transactions'] });
 
         } catch (error: any) {
@@ -491,7 +491,7 @@ export default function Dashboard() {
                 </div>
             )}
 
-            {/* ✅ WITHDRAW MODAL - GÜNCELLENDİ (FEE HESAPLAMA) */}
+            {/* ✅ WITHDRAW MODAL - UPDATED (FEE CALCULATION) */}
             {withdrawModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
                     <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative">

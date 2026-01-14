@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { API_BASE_URL } from '../config/api';
 
 // User tipi
 export interface User {
@@ -41,7 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             if (storedToken) {
                 try {
-                    const url = `${import.meta.env.VITE_API_URL || "http://127.0.0.1:8787/api"}/auth/me`;
+                    const url = `${API_BASE_URL}/auth/me`;
 
                     const res = await fetch(url, {
                         headers: { 'Authorization': `Bearer ${storedToken}` }
@@ -97,7 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const refreshUser = async () => {
         if (!token) return;
         try {
-            const res = await fetch(`${import.meta.env.VITE_API_URL || "http://127.0.0.1:8787/api"}/auth/me`, {
+            const res = await fetch(`${API_BASE_URL}/auth/me`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) {

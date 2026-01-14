@@ -10,7 +10,7 @@ export default function Marketplace() {
     const [error, setError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState("");
 
-    // Verileri API'den çekme fonksiyonu
+    // Function to fetch data from API
     const fetchProperties = async () => {
         try {
             const data = await api.getProperties();
@@ -27,7 +27,7 @@ export default function Marketplace() {
         fetchProperties();
     }, []);
 
-    // Arama filtresi
+    // Search filter
     const filteredProperties = properties.filter((p: any) => 
         p.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         p.location?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -38,7 +38,7 @@ export default function Marketplace() {
             <Navbar />
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                {/* Header ve Arama Kısmı */}
+                {/* Header and Search Section */}
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
                     <div>
                         <span className="text-[#009B9E] font-bold tracking-widest text-xs uppercase bg-[#009B9E]/10 px-3 py-1 rounded-full">
@@ -68,32 +68,32 @@ export default function Marketplace() {
                     </div>
                 </div>
 
-                {/* Yükleniyor Durumu */}
+                {/* Loading State */}
                 {loading && (
                     <div className="flex justify-center py-32">
                         <Loader2 className="animate-spin text-[#009B9E]" size={48} />
                     </div>
                 )}
 
-                {/* Hata Durumu */}
+                {/* Error State */}
                 {error && (
                     <div className="text-center text-red-500 py-10 bg-red-50 rounded-xl border border-red-200">
                         <AlertCircle className="mx-auto mb-2" /> {error}
                     </div>
                 )}
 
-                {/* Liste Boşsa */}
+                {/* If List is Empty */}
                 {!loading && !error && filteredProperties.length === 0 && (
                     <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-slate-300">
                         <p className="text-slate-500 text-lg">No properties found.</p>
                     </div>
                 )}
 
-                {/* Mülk Listesi (Grid) */}
+                {/* Property List (Grid) */}
                 {!loading && !error && filteredProperties.length > 0 && (
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                         {filteredProperties.map((property) => (
-                            // 🔥 ARTIK KOD BU KADAR BASİT VE TEMİZ:
+                            // 🔥 NOW THE CODE IS THIS SIMPLE AND CLEAN:
                             <PropertyCard key={property.id} property={property} />
                         ))}
                     </div>

@@ -1,7 +1,7 @@
 import { requireAuth } from "../lib/auth";
 import { Env } from "../index";
 
-// Tarayıcının erişimine izin veren başlıklar
+// Headers that allow browser access
 const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -9,15 +9,15 @@ const corsHeaders = {
 };
 
 export async function handleUpload(request: Request, env: Env): Promise<Response> {
-    // 1. PREFLIGHT (OPTIONS) İSTEĞİNİ YÖNET
-    // Tarayıcı "Dosya gönderebilir miyim?" diye sorar, buna "Evet" demeliyiz.
+    // 1. HANDLE PREFLIGHT (OPTIONS) REQUEST
+    // Browser asks "Can I send a file?", we must say "Yes".
     if (request.method === "OPTIONS") {
         return new Response(null, {
             headers: corsHeaders
         });
     }
 
-    // 2. Sadece POST isteğine izin ver
+    // 2. Only allow POST requests
     if (request.method !== "POST") {
         return new Response(JSON.stringify({ error: "Method not allowed" }), {
             status: 405,
@@ -26,11 +26,11 @@ export async function handleUpload(request: Request, env: Env): Promise<Response
     }
 
     try {
-        // 3. Auth Kontrolü
+        // 3. Auth Check
         const auth = await requireAuth(request, env);
         if (auth instanceof Response) {
-            // Auth hatası dönerse bile CORS başlıklarını ekleyerek döndürmeliyiz
-            // Yoksa tarayıcı yine "Failed to fetch" der.
+            // Even if auth error is returned, we must return with CORS headers
+            // Otherwise browser will say "Failed to fetch" again
             return new Response(auth.body, {
                 status: auth.status,
                 headers: { 
@@ -40,7 +40,7 @@ export async function handleUpload(request: Request, env: Env): Promise<Response
             });
         }
 
-        // 4. Dosyayı al
+        // 4. Get file
         const formData = await request.formData();
         const file = formData.get("file") as File;
 
@@ -51,16 +51,16 @@ export async function handleUpload(request: Request, env: Env): Promise<Response
             });
         }
 
-        // 5. Dosya ismini oluştur
+        // 5. Create file name
         const fileExtension = file.name.split('.').pop() || 'jpg';
         const fileName = `property-${crypto.randomUUID()}.${fileExtension}`;
 
-        // 6. R2 Bucket'a yükle
+        // 6. Upload to R2 Bucket
         await env.TERRAVEST_BUCKET.put(fileName, file.stream(), {
             httpMetadata: { contentType: file.type }
         });
 
-        // 7. Public URL oluştur (Senin verdiğin link)
+        // 7. Create Public URL (Link you provided)
         const R2_PUBLIC_URL = "https://pub-bd8456f943ae4c68b14a610fc10fa1c6.r2.dev";
 
         return new Response(JSON.stringify({

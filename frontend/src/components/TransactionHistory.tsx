@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 
-// Backend'den gelen birleşmiş veri tipi
+// Combined data type from backend
 interface Transaction {
     type: 'deposit' | 'withdrawal';
     id: number;
@@ -24,7 +24,7 @@ export default function TransactionHistory() {
             return res.success ? res.data : [];
         },
         enabled: !!user?.id,
-        refetchOnWindowFocus: false, // Sayfa odağı değişince sürekli istek atmasın
+        refetchOnWindowFocus: false, // Don't make requests continuously when page focus changes
     });
 
     // Status Badge Helper

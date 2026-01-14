@@ -4,7 +4,7 @@ import { Search, FileKey, Zap, Bitcoin, HelpCircle, BookOpen, ArrowRight, Clock,
 
 export default function Learn() {
 
-    // Süreç Adımları Verisi
+    // Process Steps Data
     const steps = [
         {
             icon: <Search size={32} />,
@@ -28,7 +28,7 @@ export default function Learn() {
         }
     ];
 
-    // Ücret Yapısı Verisi (YENİ)
+    // Fee Structure Data (NEW)
     const fees = [
         {
             title: "Trading Fee",
@@ -47,7 +47,7 @@ export default function Learn() {
         }
     ];
 
-    // Sözlük Verisi
+    // Glossary Data
     const glossary = [
         {
             term: "BTC (Bitcoin)",
@@ -153,7 +153,7 @@ export default function Learn() {
                 </div>
             </section>
 
-            {/* --- FEE STRUCTURE (YENİ EKLENEN KISIM) --- */}
+            {/* --- FEE STRUCTURE (NEWLY ADDED SECTION) --- */}
             <section className="py-20 bg-white">
                 <div className="container mx-auto px-4 max-w-5xl">
                     <div className="text-center mb-12">

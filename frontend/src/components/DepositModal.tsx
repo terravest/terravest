@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import PaymentModal from './PaymentModal';
 import { useAuth } from '../context/AuthContext';
 import { useQueryClient } from '@tanstack/react-query'; // 1. Import
+import { API_BASE_URL } from '../config/api';
 
 interface DepositModalProps {
     onClose: () => void;
@@ -17,10 +18,10 @@ export default function DepositModal({ onClose, onSuccess }: DepositModalProps) 
     const [isLoading, setIsLoading] = useState(false);
     const [orderData, setOrderData] = useState<any>(null);
 
-    // 2. QueryClient Tanımlandı
+    // 2. QueryClient Defined
     const queryClient = useQueryClient();
 
-    // 1. Anlık BTC Fiyatını Çek (Binance API)
+    // 1. Fetch Real-time BTC Price (Binance API)
     const fetchBtcPrice = async () => {
         try {
             const res = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT');
@@ -39,34 +40,34 @@ export default function DepositModal({ onClose, onSuccess }: DepositModalProps) 
         return () => clearInterval(interval);
     }, []);
 
-    // Tahmini BTC Hesaplama
+    // Estimated BTC Calculation
     const usdAmount = parseFloat(amount) || 0;
     const estimatedBtc = btcPrice ? (usdAmount / btcPrice).toFixed(8) : "---";
 
     const handleCreateOrder = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        // 🔍 DEBUG: Kullanıcıyı kontrol et
-        console.log("👤 Mevcut Kullanıcı:", user);
+        // 🔍 DEBUG: Check user
+        console.log("👤 Current User:", user);
 
         if (!usdAmount || usdAmount < 10) {
             return toast.error("Minimum deposit is $10");
         }
 
-        // 🛡️ GÜVENLİK KONTROLÜ
+        // 🛡️ SECURITY CHECK
         if (!user || !user.id) {
-            console.error("❌ HATA: Kullanıcı ID bulunamadı!", user);
-            toast.error("Oturum bilgisi okunamadı. Lütfen sayfayı yenileyip tekrar giriş yapın.");
+            console.error("❌ ERROR: User ID not found!", user);
+            toast.error("Session information could not be read. Please refresh the page and log in again.");
             return;
         }
 
         setIsLoading(true);
         try {
-            console.log(`📡 İstek gönderiliyor... Tutar: ${usdAmount}`);
+            console.log(`📡 Sending request... Amount: ${usdAmount}`);
 
-            // 🔐 Auth token'dan userId alınacak, body'den göndermeye gerek yok
+            // 🔐 userId will be taken from Auth token, no need to send from body
             const token = localStorage.getItem('token');
-            const res = await fetch('http://127.0.0.1:8787/api/deposit', {
+            const res = await fetch(`${API_BASE_URL}/deposit`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -78,18 +79,18 @@ export default function DepositModal({ onClose, onSuccess }: DepositModalProps) 
             });
 
             const data = await res.json();
-            console.log("✅ Backend Yanıtı:", data);
+            console.log("✅ Backend Response:", data);
 
             if (data.success && data.data) {
                 setOrderData(data.data);
 
-                // ✅ 3. SİHİRLİ DOKUNUŞ: Tabloyu anında yenile!
-                // Bu satır sayesinde "Pending" işlemi tabloda hemen görünür.
+                // ✅ 3. MAGIC TOUCH: Refresh table instantly!
+                // Thanks to this line, "Pending" transaction appears immediately in the table.
                 queryClient.invalidateQueries({ queryKey: ['transactions'] });
 
                 toast.success("Deposit address generated!");
             } else {
-                throw new Error(data.error || "Sunucudan beklenen yanıt gelmedi.");
+                throw new Error(data.error || "Expected response from server did not arrive.");
             }
 
         } catch (error: any) {
@@ -100,7 +101,7 @@ export default function DepositModal({ onClose, onSuccess }: DepositModalProps) 
         }
     };
 
-    // Eğer sipariş oluştuysa Ödeme Ekranına geç
+    // If order is created, proceed to Payment Screen
     if (orderData) {
         return <PaymentModal order={orderData} onClose={onClose} onSuccess={onSuccess} />;
     }
@@ -137,7 +138,7 @@ export default function DepositModal({ onClose, onSuccess }: DepositModalProps) 
                             />
                         </div>
 
-                        {/* Tahmini BTC Gösterimi */}
+                        {/* Estimated BTC Display */}
                         {btcPrice && usdAmount > 0 ? (
                             <div className="flex items-center justify-between gap-2 mt-3 text-sm text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-100">
                                 <div className="flex items-center gap-2">

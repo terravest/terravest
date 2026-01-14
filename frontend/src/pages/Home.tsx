@@ -12,7 +12,7 @@ export default function Home() {
 
             {/* --- HERO SECTION --- */}
             <section className="relative bg-[#0F172A] py-24 overflow-hidden border-b border-white/5">
-                {/* Arkaplan Efekti */}
+                {/* Background Effect */}
                 <div className="absolute inset-0 z-0 opacity-20 pointer-events-none">
                     <img
                         src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80"
@@ -22,7 +22,7 @@ export default function Home() {
                     <div className="absolute inset-0 bg-gradient-to-t from-[#0F172A] via-transparent to-transparent"></div>
                 </div>
 
-                {/* ✅ DÜZELTME: Navbar ile aynı hizalama (max-w-7xl ...) */}
+                {/* ✅ FIX: Same alignment as Navbar (max-w-7xl ...) */}
                 <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
                     <span className="inline-block py-1 px-3 rounded-full bg-[#009B9E]/10 border border-[#009B9E]/20 text-[#009B9E] font-bold text-xs tracking-widest uppercase mb-6 animate-fade-in">
                         Real Estate Tokenization
@@ -60,7 +60,7 @@ export default function Home() {
 
             {/* --- STATS SECTION --- */}
             <section className="bg-[#0F172A] border-b border-white/10 py-10">
-                {/* ✅ DÜZELTME: Hizalama */}
+                {/* ✅ FIX: Alignment */}
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
                         <div className="text-center">
@@ -85,7 +85,7 @@ export default function Home() {
 
             {/* --- FEATURES SECTION --- */}
             <section className="py-24 bg-white">
-                {/* ✅ DÜZELTME: Hizalama */}
+                {/* ✅ FIX: Alignment */}
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center max-w-3xl mx-auto mb-16">
                         <h2 className="text-3xl font-bold text-[#0F172A] mb-4">Why TerraVest?</h2>
@@ -133,7 +133,7 @@ export default function Home() {
 
             {/* --- CTA SECTION --- */}
             <section className="py-20">
-                {/* ✅ DÜZELTME: Hizalama */}
+                {/* ✅ FIX: Alignment */}
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="bg-[#0F172A] rounded-3xl p-12 md:p-16 text-center relative overflow-hidden">
                         <div className="absolute top-0 right-0 opacity-10 transform translate-x-1/3 -translate-y-1/3">

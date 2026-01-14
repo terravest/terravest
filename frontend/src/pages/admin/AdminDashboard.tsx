@@ -39,11 +39,11 @@ export default function AdminDashboard() {
     const [isProcessing, setIsProcessing] = useState(false);
 
     // MODAL STATES
-    const [selectedDeposit, setSelectedDeposit] = useState<Deposit | null>(null); // Deposit Onay Modalı için
-    const [selectedWithdrawal, setSelectedWithdrawal] = useState<Withdrawal | null>(null); // Withdraw Onay Modalı için
-    const [txInput, setTxInput] = useState(""); // Withdraw TX Hash girişi için
+    const [selectedDeposit, setSelectedDeposit] = useState<Deposit | null>(null); // For Deposit Approval Modal
+    const [selectedWithdrawal, setSelectedWithdrawal] = useState<Withdrawal | null>(null); // For Withdraw Approval Modal
+    const [txInput, setTxInput] = useState(""); // For Withdraw TX Hash input
 
-    // --- VERİ ÇEKME ---
+    // --- DATA FETCHING ---
     const fetchDashboardData = async () => {
         setLoading(true);
         try {
@@ -67,7 +67,7 @@ export default function AdminDashboard() {
         fetchDashboardData();
     }, []);
 
-    // --- 1. DEPOSIT ONAY FONKSİYONU ---
+    // --- 1. DEPOSIT APPROVAL FUNCTION ---
     const confirmDepositApproval = async () => {
         if (!selectedDeposit) return;
         setIsProcessing(true);
@@ -85,7 +85,7 @@ export default function AdminDashboard() {
         }
     };
 
-    // --- 2. WITHDRAW ONAY FONKSİYONU ---
+    // --- 2. WITHDRAW APPROVAL FUNCTION ---
     const confirmWithdrawalApproval = async () => {
         if (!selectedWithdrawal) return;
         if (txInput.length < 5) return toast.error("Please enter a valid TX Hash");
@@ -98,7 +98,7 @@ export default function AdminDashboard() {
             toast.success("Withdrawal approved & TX saved!", { id: toastId });
             fetchDashboardData();
             setSelectedWithdrawal(null);
-            setTxInput(""); // Inputu temizle
+            setTxInput(""); // Clear input
         } catch (error: any) {
             toast.error(error.message || "Failed", { id: toastId });
         } finally {
@@ -106,7 +106,7 @@ export default function AdminDashboard() {
         }
     };
 
-    // Pano'dan yapıştırma yardımcısı
+    // Clipboard paste helper
     const handlePaste = async () => {
         try {
             const text = await navigator.clipboard.readText();

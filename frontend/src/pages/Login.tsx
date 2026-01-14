@@ -9,14 +9,14 @@ import { Turnstile } from '@marsidev/react-turnstile'; // 1. Turnstile import ed
 
 export default function Login() {
     const navigate = useNavigate();
-    // login fonksiyonu artık 3. parametre (rememberMe) alıyor
+    // login function now takes 3rd parameter (rememberMe)
     const { login, user } = useAuth();
 
     const [isLoading, setIsLoading] = useState(false);
     const [identifier, setIdentifier] = useState('');
     const [password, setPassword] = useState('');
 
-    // 2. Yeni State'ler
+    // 2. New States
     const [turnstileToken, setTurnstileToken] = useState<string>("");
     const [rememberMe, setRememberMe] = useState(false);
 
@@ -35,7 +35,7 @@ export default function Login() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        // Bot kontrolü (Token yoksa işlem yapma)
+        // Bot check (Don't proceed if token is missing)
         if (!turnstileToken) {
             toast.error("Please confirm you are not a robot🤖");
             return;
@@ -45,9 +45,9 @@ export default function Login() {
         toast.dismiss();
 
         try {
-            // API'ye token ve rememberMe bilgisini gönderiyoruz
-            // Not: api.login fonksiyonunun tip tanımı güncellenmediyse TS uyarısı verebilir,
-            // ama JS tarafında çalışır. api.ts'i güncellemek iyi olur.
+            // Send token and rememberMe info to API
+            // Note: If api.login function type definition isn't updated, TS may warn,
+            // but it works on JS side. It's good to update api.ts.
             const response = await api.login({
                 identifier,
                 password,
@@ -58,7 +58,7 @@ export default function Login() {
             if (response.token) {
                 const userData = response.user || { email: '', id: 0, role: 'user', username: '' };
 
-                // AuthContext'e "Beni Hatırla" tercihini bildiriyoruz
+                // Inform AuthContext about "Remember Me" preference
                 login(response.token, userData, rememberMe);
 
                 toast.success("Welcome back! 👋");
@@ -82,8 +82,8 @@ export default function Login() {
             }
             toast.error(errorMessage);
 
-            // Hata durumunda Turnstile'ı resetlemek iyi bir pratik olabilir
-            // (Kütüphane otomatik yapmıyorsa manuel reset gerekebilir)
+            // Resetting Turnstile on error may be a good practice
+            // (Manual reset may be needed if library doesn't do it automatically)
         } finally {
             setIsLoading(false);
         }
@@ -113,7 +113,7 @@ export default function Login() {
                             <User className="absolute left-3 top-3.5 h-5 w-5 text-gray-300" />
                             <input
                                 type="text"
-                                placeholder="E-posta veya Kullanıcı Adı"
+                                placeholder="Email or Username"
                                 className="w-full bg-black/20 border border-white/10 rounded-lg py-3 pl-10 pr-4 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-[#00E5FF] focus:border-transparent transition-all"
                                 value={identifier}
                                 onChange={(e) => setIdentifier(e.target.value)}
@@ -125,7 +125,7 @@ export default function Login() {
                             <Lock className="absolute left-3 top-3.5 h-5 w-5 text-gray-300" />
                             <input
                                 type="password"
-                                placeholder="Şifre"
+                                placeholder="Password"
                                 className="w-full bg-black/20 border border-white/10 rounded-lg py-3 pl-10 pr-4 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-[#00E5FF] focus:border-transparent transition-all"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
@@ -152,7 +152,7 @@ export default function Login() {
                             <Turnstile
                                 siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || "YOUR_SITE_KEY_HERE"}
                                 onSuccess={(token) => setTurnstileToken(token)}
-                                onError={() => toast.error("Güvenlik doğrulaması yüklenemedi.")}
+                                onError={() => toast.error("Security verification failed to load.")}
                                 options={{
                                     theme: 'light',
                                     size: 'normal', // veya 'compact'
@@ -162,7 +162,7 @@ export default function Login() {
 
                         <button
                             type="submit"
-                            // Token yoksa butonu disable et (Kullanıcıyı zorla)
+                            // Disable button if token is missing (Force user)
                             disabled={isLoading || !turnstileToken}
                             className="w-full bg-[#FF6B6B] hover:bg-[#E85555] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3 rounded-lg shadow-lg transform transition hover:scale-[1.02] flex items-center justify-center gap-2"
                         >

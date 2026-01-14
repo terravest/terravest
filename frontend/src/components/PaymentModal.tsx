@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { X, Copy, CheckCircle, ExternalLink, Loader2, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import QRCode from 'react-qr-code';
+import { API_BASE_URL } from '../config/api';
 
 interface PaymentModalProps {
     order: any;
@@ -10,8 +11,8 @@ interface PaymentModalProps {
 }
 
 export default function PaymentModal({ order, onClose, onSuccess }: PaymentModalProps) {
-    // Backend'den gelen veriyi değişkene alıyoruz (State kullanmıyoruz ki eski veri kalmasın)
-    // Backend bazen "address", bazen "payment_address" diyebilir, ikisini de dene.
+    // Get data from backend into variable (Not using state so old data doesn't persist)
+    // Backend may say "address" or "payment_address", try both.
     const finalAddress = order?.address || order?.payment_address;
     const finalAmount = order?.amount || order?.amount_usd;
     const depositId = order?.id || order?.depositId;
@@ -19,15 +20,15 @@ export default function PaymentModal({ order, onClose, onSuccess }: PaymentModal
     const [status, setStatus] = useState(order.status || 'pending');
     const [timeLeft, setTimeLeft] = useState(15 * 60);
 
-    // 🛑 GÜVENLİK: Eğer adres yoksa hata göster (Ekrana yanlış bir şey basmasın)
+    // 🛑 SECURITY: Show error if address is missing (Don't display wrong data on screen)
     if (!finalAddress) {
         return (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80">
                 <div className="bg-white p-6 rounded-lg text-center">
                     <AlertTriangle className="text-red-500 mx-auto mb-2" size={32} />
-                    <p className="font-bold">Adres Yüklenemedi</p>
-                    <p className="text-sm text-slate-500 mb-4">Lütfen sayfayı yenileyip tekrar deneyin.</p>
-                    <button onClick={onClose} className="bg-slate-200 px-4 py-2 rounded">Kapat</button>
+                    <p className="font-bold">Address Failed to Load</p>
+                    <p className="text-sm text-slate-500 mb-4">Please refresh the page and try again.</p>
+                    <button onClick={onClose} className="bg-slate-200 px-4 py-2 rounded">Close</button>
                 </div>
             </div>
         );
@@ -35,7 +36,7 @@ export default function PaymentModal({ order, onClose, onSuccess }: PaymentModal
 
     const copyToClipboard = () => {
         navigator.clipboard.writeText(finalAddress);
-        toast.success("Adres Kopyalandı!");
+        toast.success("Address Copied!");
     };
 
     // POLLING: Durum Kontrolü
@@ -46,7 +47,7 @@ export default function PaymentModal({ order, onClose, onSuccess }: PaymentModal
             try {
                 if (!depositId) return;
                 const token = localStorage.getItem('token');
-                const res = await fetch(`http://127.0.0.1:8787/api/deposit/${depositId}`, {
+                const res = await fetch(`${API_BASE_URL}/deposit/${depositId}`, {
                     headers: {
                         ...(token ? { 'Authorization': `Bearer ${token}` } : {})
                     }
@@ -85,7 +86,7 @@ export default function PaymentModal({ order, onClose, onSuccess }: PaymentModal
         return `${m}:${s < 10 ? '0' : ''}${s}`;
     };
 
-    // --- BAŞARILI EKRANI ---
+    // --- SUCCESS SCREEN ---
     if (status === 'completed') {
         return (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm animate-in fade-in">
@@ -100,7 +101,7 @@ export default function PaymentModal({ order, onClose, onSuccess }: PaymentModal
         );
     }
 
-    // --- ÖDEME EKRANI ---
+    // --- PAYMENT SCREEN ---
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm animate-in fade-in">
             <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-0 overflow-hidden relative">
@@ -125,7 +126,7 @@ export default function PaymentModal({ order, onClose, onSuccess }: PaymentModal
                     {/* QR Code */}
                     <div className="flex justify-center mb-8">
                         <div className="p-4 bg-white border-2 border-slate-100 rounded-xl shadow-sm">
-                            {/* DİKKAT: Burada state değil, direkt prop'tan gelen değişkeni kullanıyoruz */}
+                            {/* NOTE: Using variable directly from prop, not state */}
                             <QRCode value={finalAddress} size={180} />
                         </div>
                     </div>

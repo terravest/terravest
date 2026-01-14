@@ -29,7 +29,7 @@ export const handleRegister = async (request: Request, env: Env) => {
     try {
         const body = await request.json();
 
-        // 1. Validasyon
+        // 1. Validation
         const validation = RegisterSchema.safeParse(body);
         if (!validation.success) {
             return validationError(validation.error);
@@ -37,7 +37,7 @@ export const handleRegister = async (request: Request, env: Env) => {
 
         const { email, password, username } = validation.data;
 
-        // 2. Kullanıcı var mı kontrolü
+        // 2. Check if user exists
         const existingUser = await env.terravest_db
             .prepare('SELECT id FROM users WHERE email = ? OR username = ?')
             .bind(email, username)
@@ -47,7 +47,7 @@ export const handleRegister = async (request: Request, env: Env) => {
             return errorResponse("Email or username already exists", 409);
         }
 
-        // 3. Şifreleme ve Kayıt
+        // 3. Hashing and Registration
         const hashedPassword = await bcrypt.hash(password, 10);
 
         const result = await env.terravest_db
@@ -61,16 +61,16 @@ export const handleRegister = async (request: Request, env: Env) => {
 
         const newUserId = result.meta.last_row_id;
 
-        // Token üret (24 saatlik - Register sonrası "Beni Hatırla" varsayılan false kabul edilir)
+        // Generate token (24 hours - "Remember Me" defaults to false after registration)
         const token = await jwt.sign({
             id: newUserId,
             email: email,
             username: username,
             role: 'user',
-            exp: Math.floor(Date.now() / 1000) + 24 * 60 * 60 // 24 Saat
+            exp: Math.floor(Date.now() / 1000) + 24 * 60 * 60 // 24 Hours
         }, env.JWT_SECRET);
 
-        // Cevap olarak Token dönüyoruz
+        // Return Token as response
         return json({
             success: true,
             token,
@@ -93,17 +93,17 @@ export const handleRegister = async (request: Request, env: Env) => {
 ========================= */
 export async function handleLogin(request: Request, env: Env): Promise<Response> {
     try {
-        // Body'yi "any" olarak alıyoruz ki turnstileToken ve rememberMe'ye erişebilelim
-        // (LoginSchema bu alanları bilmiyorsa hata vermesin diye)
+        // Take body as "any" so we can access turnstileToken and rememberMe
+        // (So LoginSchema doesn't error if it doesn't know these fields)
         const body = await request.json() as any;
 
         // ---------------------------------------------------------
-        // 🛡️ GÜVENLİK ADIMI: TURNSTILE KONTROLÜ
+        // 🛡️ SECURITY STEP: TURNSTILE CHECK
         // ---------------------------------------------------------
         const turnstileToken = body.turnstileToken;
         const ip = request.headers.get('CF-Connecting-IP') || "127.0.0.1";
 
-        // Secret Key yoksa (Dev ortamı) veya Token boşsa kontrol
+        // Check if Secret Key is missing (Dev environment) or Token is empty
         if (env.TURNSTILE_SECRET) {
             if (!turnstileToken) {
                 return errorResponse("Security check required. Please refresh.", 400);
@@ -119,7 +119,7 @@ export async function handleLogin(request: Request, env: Env): Promise<Response>
         }
         // ---------------------------------------------------------
 
-        // Normal Validasyon (Zod)
+        // Normal Validation (Zod)
         const validation = LoginSchema.safeParse(body);
 
         if (!validation.success) {
@@ -151,11 +151,11 @@ export async function handleLogin(request: Request, env: Env): Promise<Response>
         const safeBalance = user.usd_balance == null ? 0 : Number(user.usd_balance);
 
         // ---------------------------------------------------------
-        // 🕒 TOKEN SÜRESİ (REMEMBER ME)
+        // 🕒 TOKEN DURATION (REMEMBER ME)
         // ---------------------------------------------------------
-        const rememberMe = body.rememberMe || false; // Frontend'den gelen değer
+        const rememberMe = body.rememberMe || false; // Value from frontend
 
-        // Beni hatırla varsa 7 gün, yoksa 2 saat
+        // If remember me is checked, 7 days, otherwise 2 hours
         const expirationTime = rememberMe
             ? Math.floor(Date.now() / 1000) + (60 * 60 * 24 * 7)
             : Math.floor(Date.now() / 1000) + (60 * 60 * 2);

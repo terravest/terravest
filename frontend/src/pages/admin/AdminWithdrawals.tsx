@@ -22,24 +22,24 @@ export default function AdminWithdrawals() {
     const [processingId, setProcessingId] = useState<number | null>(null);
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-    // Verileri Çek
+    // Fetch Data
     const fetchWithdrawals = async () => {
         setLoading(true);
         setErrorMsg(null);
         try {
-            console.log("📡 Admin: Withdrawals verisi isteniyor...");
+            console.log("📡 Admin: Requesting withdrawals data...");
             const res = await api.getAdminWithdrawals();
 
-            console.log("📡 Backend Yanıtı:", res); // Konsola yanıtı yazdır
+            console.log("📡 Backend Response:", res); // Log response to console
 
             if (res.success && Array.isArray(res.data)) {
                 setWithdrawals(res.data);
             } else {
-                console.error("Beklenmedik veri formatı:", res);
-                setErrorMsg("Backend'den geçersiz veri formatı geldi.");
+                console.error("Unexpected data format:", res);
+                setErrorMsg("Invalid data format received from backend.");
             }
         } catch (error: any) {
-            console.error("❌ Veri çekme hatası:", error);
+            console.error("❌ Data fetch error:", error);
             setErrorMsg(error.message || "Failed to load withdrawals");
             toast.error("Failed to load withdrawals");
         } finally {
@@ -51,7 +51,7 @@ export default function AdminWithdrawals() {
         fetchWithdrawals();
     }, []);
 
-    // Onaylama İşlemi (TX Hash İster)
+    // Approval Process (Requires TX Hash)
     const handleApprove = async (id: number) => {
         const txHash = window.prompt("Enter the Blockchain Transaction Hash (TX ID):");
 

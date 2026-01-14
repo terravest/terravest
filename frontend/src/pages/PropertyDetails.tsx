@@ -20,11 +20,11 @@ export default function PropertyDetails() {
         async function load() {
             try {
                 if (id) {
-                    // Backend'deki güncellediğimiz endpoint (resimleri array olarak döner)
+                    // Updated endpoint in backend (returns images as array)
                     const property = await api.getProperty(id);
                     setProp(property);
                 } else {
-                    // ID yoksa listeye dön
+                    // If no ID, return to list
                     navigate('/marketplace');
                 }
             } catch (e) {
@@ -76,8 +76,8 @@ export default function PropertyDetails() {
 
     const tokenPrice = prop.price_usd / prop.total_tokens;
 
-    // --- RESİM HAZIRLIĞI ---
-    // Backend'den 'images' array'i geliyorsa onu kullan, yoksa 'image_url'i tek elemanlı array yap.
+    // --- IMAGE PREPARATION ---
+    // If 'images' array comes from backend, use it, otherwise make 'image_url' a single-element array.
     const images = prop.images && prop.images.length > 0
         ? prop.images
         : (prop.image_url ? [{ id: null, url: prop.image_url, isMain: true, displayOrder: 0 }] : []);
@@ -122,15 +122,15 @@ export default function PropertyDetails() {
 
             <div className="container mx-auto px-4 py-8 grid lg:grid-cols-3 gap-8">
 
-                {/* --- SOL KOLON (GALERİ & DETAYLAR) --- */}
+                {/* --- LEFT COLUMN (GALLERY & DETAILS) --- */}
                 <div className="lg:col-span-2 space-y-8">
 
-                    {/* GALERİ COMPONENTİ */}
+                    {/* GALLERY COMPONENT */}
                     <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
                         <PropertyGallery images={images} propertyTitle={prop.title} />
                     </div>
 
-                    {/* FİNANSAL ÖZET ŞERİDİ */}
+                    {/* FINANCIAL SUMMARY BAR */}
                     <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 grid grid-cols-2 md:grid-cols-4 gap-6 divide-x divide-slate-50">
                         <div className="pl-2">
                             <span className="block text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-1">Asset Value</span>
@@ -152,7 +152,7 @@ export default function PropertyDetails() {
                         </div>
                     </div>
 
-                    {/* AÇIKLAMA VE MADDELER */}
+                    {/* DESCRIPTION AND ITEMS */}
                     <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
                         <h3 className="text-xl font-bold text-[#0F172A] mb-4 flex items-center gap-2">
                             <FileText className="text-[#009B9E]" /> Investment Summary
@@ -173,7 +173,7 @@ export default function PropertyDetails() {
                     </div>
                 </div>
 
-                {/* --- SAĞ KOLON (YATIRIM KARTI - STICKY) --- */}
+                {/* --- RIGHT COLUMN (INVESTMENT CARD - STICKY) --- */}
                 <div className="lg:col-span-1">
                     <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100 sticky top-28">
                         <div className="mb-6">

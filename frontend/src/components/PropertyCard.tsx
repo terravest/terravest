@@ -14,10 +14,10 @@ interface Property {
 }
 
 export default function PropertyCard({ property }: { property: Property }) {
-    // Resim Seçimi: Backend URL > Array İlk Eleman > Placeholder
+    // Image Selection: Backend URL > Array First Element > Placeholder
     const displayImage = property.image_url || property.images?.[0]?.url || "https://placehold.co/600x400?text=No+Image";
 
-    // Progress Bar Hesabı
+    // Progress Bar Calculation
     const soldTokens = property.total_tokens - property.available_tokens;
     const progressPercent = Math.min(100, Math.max(0, (soldTokens / property.total_tokens) * 100));
 
@@ -25,7 +25,7 @@ export default function PropertyCard({ property }: { property: Property }) {
         <Link to={`/properties/${property.id}`} className="block group h-full">
             <div className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 hover:shadow-xl transition-all duration-300 h-full flex flex-col">
                 
-                {/* Resim Alanı */}
+                {/* Image Area */}
                 <div className="relative h-48 overflow-hidden">
                     <img 
                         src={displayImage} 
@@ -38,7 +38,7 @@ export default function PropertyCard({ property }: { property: Property }) {
                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
                 </div>
 
-                {/* İçerik */}
+                {/* Content */}
                 <div className="p-5 flex flex-col flex-grow">
                     <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2 line-clamp-1 group-hover:text-[#009B9E] transition-colors">
                         {property.title}

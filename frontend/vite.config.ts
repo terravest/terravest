@@ -12,11 +12,30 @@ export default defineConfig(({ mode }) => {
     env.SENTRY_PROJECT &&
     env.SENTRY_AUTH_TOKEN;
 
-  // ✅ Production URL'i kesin olarak belirle
+  // ✅ Production URL'i kesin olarak belirle (fallback)
   const productionApiUrl = 'https://terravest-api.terravest.workers.dev/api';
-  const apiUrl = mode === 'production' 
-    ? productionApiUrl 
-    : (env.VITE_API_URL || 'http://localhost:8787/api');
+  
+  // ✅ API URL belirleme mantığı:
+  // 1. Cloudflare Dashboard'dan VITE_API_URL varsa onu kullan
+  // 2. Production mode'da ve env yoksa production URL kullan
+  // 3. Development mode'da env yoksa localhost kullan (sadece dev için)
+  let apiUrl: string;
+  
+  if (env.VITE_API_URL) {
+    // Dashboard'dan gelen değeri kullan
+    apiUrl = env.VITE_API_URL;
+    // Localhost kontrolü - production build'lerde localhost kabul etme
+    if (mode === 'production' && (apiUrl.includes('127.0.0.1') || apiUrl.includes('localhost'))) {
+      console.warn('⚠️ Production build\'de localhost tespit edildi, production URL\'e geçiliyor');
+      apiUrl = productionApiUrl;
+    }
+  } else if (mode === 'production') {
+    // Production mode'da env yoksa kesinlikle production URL
+    apiUrl = productionApiUrl;
+  } else {
+    // Development mode'da fallback olarak localhost
+    apiUrl = 'http://localhost:8787/api';
+  }
 
   console.log(`🔧 Build Mode: ${mode}`);
   console.log(`🌍 API URL: ${apiUrl}`);
@@ -36,9 +55,9 @@ export default defineConfig(({ mode }) => {
     ],
     
     define: {
-      // ✅ Build-time'da production URL'i garanti et
+      // ✅ Build-time'da API URL'i gömmek - Dashboard'dan gelirse onu kullan, yoksa fallback
       'import.meta.env.VITE_API_URL': JSON.stringify(apiUrl),
-      'import.meta.env.VITE_TURNSTILE_SITE_KEY': JSON.stringify(env.VITE_TURNSTILE_SITE_KEY),
+      'import.meta.env.VITE_TURNSTILE_SITE_KEY': JSON.stringify(env.VITE_TURNSTILE_SITE_KEY || ''),
       // ✅ Mode bilgisini de aktar
       'import.meta.env.MODE': JSON.stringify(mode),
     },

@@ -16,7 +16,7 @@
 	"vars": {
 		"ENVIRONMENT": "production",
 		"FRONTEND_URL": "https://terravest-frontend.pages.dev",
-		"VITE_API_URL": "https://terravest-api.terravest.workers.dev" 
+		"VITE_API_URL": "https://terravest-api.terravest.workers.dev/api" 
 	},
 
 	// ==========================================

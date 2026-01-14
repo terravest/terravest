@@ -3,19 +3,27 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import { sentryVitePlugin } from '@sentry/vite-plugin';
 
-// https://vite.dev/config/
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), '');
-
+  // ✅ VITE_ prefix'li tüm değişkenleri yükle
+  const env = loadEnv(mode, process.cwd(), 'VITE_');
+  
   const hasSentry =
     env.SENTRY_ORG &&
     env.SENTRY_PROJECT &&
     env.SENTRY_AUTH_TOKEN;
 
+  // ✅ Production URL'i kesin olarak belirle
+  const productionApiUrl = 'https://terravest-api.terravest.workers.dev/api';
+  const apiUrl = mode === 'production' 
+    ? productionApiUrl 
+    : (env.VITE_API_URL || 'http://localhost:8787/api');
+
+  console.log(`🔧 Build Mode: ${mode}`);
+  console.log(`🌍 API URL: ${apiUrl}`);
+
   return {
     plugins: [
       react(),
-
       ...(hasSentry
         ? [
           sentryVitePlugin({
@@ -28,10 +36,13 @@ export default defineConfig(({ mode }) => {
     ],
     
     define: {
-      'import.meta.env.VITE_API_URL': JSON.stringify(env.VITE_API_URL || 'https://terravest-api.terravest.workers.dev/api'),
+      // ✅ Build-time'da production URL'i garanti et
+      'import.meta.env.VITE_API_URL': JSON.stringify(apiUrl),
       'import.meta.env.VITE_TURNSTILE_SITE_KEY': JSON.stringify(env.VITE_TURNSTILE_SITE_KEY),
+      // ✅ Mode bilgisini de aktar
+      'import.meta.env.MODE': JSON.stringify(mode),
     },
-    // ✅ Cloudflare Pages için ZORUNLU
+
     base: '/',
 
     resolve: {
@@ -48,7 +59,6 @@ export default defineConfig(({ mode }) => {
 
       rollupOptions: {
         output: {
-          // ✅ Güvenli manuel chunking
           manualChunks(id) {
             if (id.includes('node_modules')) {
               if (

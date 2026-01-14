@@ -3,11 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import { api } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
-import { useQuery, useQueryClient } from '@tanstack/react-query'; // ✅ useQueryClient eklendi
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
     TrendingUp, Loader2,
     ArrowDownCircle, X, DollarSign,
-    User, Lock, Mail, LogOut, Settings, Wallet, PieChart, ArrowUpRight, Calculator
+    PieChart, ArrowUpRight, Calculator, Wallet
 } from 'lucide-react';
 import PaymentModal from '../components/PaymentModal';
 import TransactionHistory from '../components/TransactionHistory';
@@ -15,10 +15,9 @@ import toast from 'react-hot-toast';
 import { API_BASE_URL } from '../config/api';
 
 export default function Dashboard() {
-    const { user, logout, refreshUser } = useAuth();
+    const { user, refreshUser } = useAuth();
     const navigate = useNavigate();
-    const queryClient = useQueryClient(); // ✅ Query Client initialized
-    const [activeTab, setActiveTab] = useState<'portfolio' | 'settings'>('portfolio');
+    const queryClient = useQueryClient();
 
     // --- 🔒 SECURITY CHECK (REDIRECT) ---
     useEffect(() => {
@@ -54,10 +53,6 @@ export default function Dashboard() {
     const [withdrawAddress, setWithdrawAddress] = useState('');
 
     const [isProcessing, setIsProcessing] = useState(false);
-
-    // Settings States
-    const [newPassword, setNewPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
 
     // --- CALCULATIONS (TOTAL NET WORTH) ---
     const cashBalance = user?.usd_balance || 0;
@@ -159,24 +154,6 @@ export default function Dashboard() {
         }
     };
 
-    const handlePasswordChange = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (newPassword.length < 8) return toast.error("Password must be at least 8 characters.");
-        if (newPassword !== confirmPassword) return toast.error("Passwords do not match.");
-
-        setIsProcessing(true);
-        try {
-            await api.changePassword(newPassword);
-            toast.success("Password updated successfully!");
-            setNewPassword('');
-            setConfirmPassword('');
-        } catch (e: any) {
-            toast.error(e.message);
-        } finally {
-            setIsProcessing(false);
-        }
-    };
-
     if (isLoading) return <div className="min-h-screen bg-[#F9F7F3] flex items-center justify-center"><Loader2 className="animate-spin text-[#009B9E] h-12 w-12" /></div>;
 
     return (
@@ -185,246 +162,153 @@ export default function Dashboard() {
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
-                {/* --- HEADER & TABS --- */}
-                <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-6">
-                    <div>
-                        <h1 className="text-3xl font-bold text-[#0F172A]">My Account</h1>
-                        <p className="text-slate-500 mt-1">Welcome back, <span className="font-bold text-[#0F172A]">{user?.username || user?.email?.split('@')[0]}</span></p>
-                    </div>
-
-                    <div className="bg-white p-1 rounded-xl shadow-sm border border-slate-200 flex">
-                        <button
-                            onClick={() => setActiveTab('portfolio')}
-                            className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-bold transition ${activeTab === 'portfolio' ? 'bg-[#0F172A] text-white shadow-md' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'}`}
-                        >
-                            <PieChart size={18} /> Portfolio
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('settings')}
-                            className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-bold transition ${activeTab === 'settings' ? 'bg-[#0F172A] text-white shadow-md' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'}`}
-                        >
-                            <Settings size={18} /> Settings
-                        </button>
-                    </div>
+                {/* --- HEADER --- */}
+                <div className="mb-8">
+                    <h1 className="text-3xl font-bold text-[#0F172A]">My Portfolio</h1>
+                    <p className="text-slate-500 mt-1">Welcome back, <span className="font-bold text-[#0F172A]">{user?.username || user?.email?.split('@')[0]}</span></p>
                 </div>
 
-                {/* ==================== PORTFOLIO TAB ==================== */}
-                {activeTab === 'portfolio' && (
-                    <div
-                        className="animate-in fade-in slide-in-from-bottom-4 duration-500"
-                        data-testid="portfolio-section"
-                    >
+                {/* ==================== PORTFOLIO CONTENT ==================== */}
+                <div
+                    className="animate-in fade-in slide-in-from-bottom-4 duration-500"
+                    data-testid="portfolio-section"
+                >
 
-                        {/* 1. TOTAL NET WORTH CARD */}
-                        <div className="grid md:grid-cols-3 gap-6 mb-12">
-                            {/* Main Net Worth */}
-                            <div className="md:col-span-2 bg-[#0F172A] p-8 rounded-3xl shadow-2xl shadow-slate-300 text-white relative overflow-hidden">
-                                <div className="absolute right-0 top-0 h-64 w-64 bg-white/5 rounded-full -mr-16 -mt-16 blur-3xl"></div>
+                    {/* 1. TOTAL NET WORTH CARD */}
+                    <div className="grid md:grid-cols-3 gap-6 mb-12">
+                        {/* Main Net Worth */}
+                        <div className="md:col-span-2 bg-[#0F172A] p-8 rounded-3xl shadow-2xl shadow-slate-300 text-white relative overflow-hidden">
+                            <div className="absolute right-0 top-0 h-64 w-64 bg-white/5 rounded-full -mr-16 -mt-16 blur-3xl"></div>
 
-                                <div className="relative z-10">
-                                    <div className="flex justify-between items-start">
-                                        <div>
-                                            <div className="flex items-center gap-3 mb-2 opacity-80">
-                                                <TrendingUp size={20} className="text-[#00E5FF]" />
-                                                <span className="text-sm font-bold tracking-widest uppercase">Total Net Worth</span>
-                                            </div>
-                                            <h2 className="text-5xl font-black tracking-tight mb-8">
-                                                ${totalNetWorth.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                            </h2>
+                            <div className="relative z-10">
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <div className="flex items-center gap-3 mb-2 opacity-80">
+                                            <TrendingUp size={20} className="text-[#00E5FF]" />
+                                            <span className="text-sm font-bold tracking-widest uppercase">Total Net Worth</span>
                                         </div>
-                                        {/* WITHDRAW BUTTON */}
-                                        <button
-                                            onClick={() => setWithdrawModalOpen(true)}
-                                            className="bg-white/10 hover:bg-white/20 border border-white/10 text-white px-4 py-2 rounded-xl text-sm font-bold transition flex items-center gap-2 backdrop-blur-sm"
-                                        >
-                                            <ArrowUpRight size={16} /> Withdraw
-                                        </button>
+                                        <h2 className="text-5xl font-black tracking-tight mb-8">
+                                            ${totalNetWorth.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </h2>
                                     </div>
-
-                                    {/* Breakdown */}
-                                    <div className="grid grid-cols-3 gap-6 border-t border-white/10 pt-6">
-                                        <div>
-                                            <p className="text-xs text-slate-400 font-bold uppercase mb-1">Cash Balance</p>
-                                            <p className="text-xl font-bold">${cashBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-xs text-slate-400 font-bold uppercase mb-1">Asset Value</p>
-                                            <p className="text-xl font-bold text-[#00E5FF]">${assetsValue.toLocaleString()}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-xs text-slate-400 font-bold uppercase mb-1">Unclaimed Rent</p>
-                                            <p className="text-xl font-bold text-green-400">${pendingRewards.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                                        </div>
-                                    </div>
+                                    {/* WITHDRAW BUTTON */}
+                                    <button
+                                        onClick={() => setWithdrawModalOpen(true)}
+                                        className="bg-white/10 hover:bg-white/20 border border-white/10 text-white px-4 py-2 rounded-xl text-sm font-bold transition flex items-center gap-2 backdrop-blur-sm"
+                                    >
+                                        <ArrowUpRight size={16} /> Withdraw
+                                    </button>
                                 </div>
-                            </div>
 
-                            {/* Pending Rewards Action */}
-                            <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-between">
-                                <div>
-                                    <div className="flex items-center gap-3 mb-4">
-                                        <div className="bg-green-100 p-2 rounded-lg text-green-600"><DollarSign size={20} /></div>
-                                        <span className="font-bold text-slate-700">Rewards</span>
+                                {/* Breakdown */}
+                                <div className="grid grid-cols-3 gap-6 border-t border-white/10 pt-6">
+                                    <div>
+                                        <p className="text-xs text-slate-400 font-bold uppercase mb-1">Cash Balance</p>
+                                        <p className="text-xl font-bold">${cashBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                                     </div>
-                                    <p className="text-3xl font-bold text-green-600 mb-1">${pendingRewards.toFixed(2)}</p>
-                                    <p className="text-xs text-slate-400">Accumulated from rentals</p>
-                                </div>
-                                <button
-                                    onClick={() => setClaimModalOpen(true)}
-                                    disabled={pendingRewards <= 0.01}
-                                    className={`w-full py-3 rounded-xl font-bold text-sm transition mt-4
-                                    ${pendingRewards > 0.01
-                                            ? "bg-green-500 hover:bg-green-600 text-white shadow-lg shadow-green-200"
-                                            : "bg-slate-100 text-slate-400 cursor-not-allowed"}`}
-                                >
-                                    Claim to Wallet
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* 2. ASSETS LIST */}
-                        <h2 className="text-xl font-bold text-[#0F172A] mb-6 flex items-center gap-2">
-                            <PieChart className="text-[#009B9E]" /> Your Assets
-                        </h2>
-
-                        {data?.assets && data.assets.length > 0 ? (
-                            <div
-                                className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12"
-                                data-testid="portfolio-assets-list"
-                            >
-                                {data.assets.map((asset: any, index: number) => {
-                                    const unitPrice = getUnitPrice(asset);
-                                    const currentValue = asset.investedAmount * unitPrice;
-                                    return (
-                                        <div
-                                            key={index}
-                                            className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 flex flex-col justify-between h-full hover:shadow-md transition group"
-                                            data-testid={`portfolio-asset-card-${asset.property_id}`}
-                                            data-asset-id={asset.id}
-                                            data-asset-property-id={asset.property_id}
-                                        >
-                                            <div>
-                                                <div className="flex justify-between items-start mb-4">
-                                                    <div className="font-bold text-[#0F172A] text-lg group-hover:text-[#009B9E] transition">{asset.propertyName}</div>
-                                                    <div className="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full font-bold">Active</div>
-                                                </div>
-                                                <div className="space-y-3 mb-6">
-                                                    <div className="flex justify-between text-sm">
-                                                        <span className="text-slate-400">Tokens Owned</span>
-                                                        <span
-                                                            className="font-bold text-slate-700"
-                                                            data-testid={`portfolio-token-amount-${asset.property_id}`}
-                                                        >
-                                                            {asset.investedAmount.toFixed(2)}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex justify-between text-sm">
-                                                        <span className="text-slate-400">Current Value</span>
-                                                        <span className="font-bold text-[#0F172A]">${currentValue.toLocaleString()}</span>
-                                                    </div>
-                                                    <div className="flex justify-between text-sm">
-                                                        <span className="text-slate-400">Unclaimed Rent</span>
-                                                        <span className="font-bold text-green-600">+${(asset.unclaimed_rewards || 0).toFixed(4)}</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <button onClick={() => { setSelectedAsset(asset); setSellModalOpen(true); }} className="w-full mt-auto bg-slate-50 hover:bg-slate-100 text-slate-600 font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 text-sm">
-                                                <ArrowDownCircle size={18} /> Sell Tokens
-                                            </button>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        ) : (
-                            <div
-                                className="text-center py-12 bg-white rounded-2xl border border-dashed border-slate-300 mb-12"
-                                data-testid="portfolio-empty-state"
-                            >
-                                <p className="text-slate-500">No active assets found. Start investing from the Marketplace!</p>
-                            </div>
-                        )}
-
-                        {/* 3. TRANSACTION HISTORY */}
-                        <div className="mb-12">
-                            <TransactionHistory />
-                        </div>
-                    </div>
-                )}
-
-                {/* ==================== SETTINGS TAB ==================== */}
-                {activeTab === 'settings' && (
-                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-2xl mx-auto">
-                        {/* Profile Info Card */}
-                        <div className="bg-white p-8 rounded-2xl border border-slate-100 shadow-sm mb-8">
-                            <h2 className="text-xl font-bold text-[#0F172A] mb-6 flex items-center gap-2">
-                                <User className="text-[#009B9E]" /> Profile Information
-                            </h2>
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Email Address</label>
-                                    <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200 text-slate-600">
-                                        <Mail size={18} /> {user?.email}
-                                        <span className="ml-auto text-xs bg-slate-200 px-2 py-1 rounded text-slate-500">Read-Only</span>
+                                    <div>
+                                        <p className="text-xs text-slate-400 font-bold uppercase mb-1">Asset Value</p>
+                                        <p className="text-xl font-bold text-[#00E5FF]">${assetsValue.toLocaleString()}</p>
                                     </div>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Username</label>
-                                    <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200 text-slate-600">
-                                        <User size={18} /> {user?.username || 'N/A'}
-                                        <span className="ml-auto text-xs bg-slate-200 px-2 py-1 rounded text-slate-500">Read-Only</span>
+                                    <div>
+                                        <p className="text-xs text-slate-400 font-bold uppercase mb-1">Unclaimed Rent</p>
+                                        <p className="text-xl font-bold text-green-400">${pendingRewards.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Security Card */}
-                        <div className="bg-white p-8 rounded-2xl border border-slate-100 shadow-sm mb-8">
-                            <h2 className="text-xl font-bold text-[#0F172A] mb-6 flex items-center gap-2">
-                                <Lock className="text-[#009B9E]" /> Change Password
-                            </h2>
-                            <form onSubmit={handlePasswordChange} className="space-y-4">
-                                <div>
-                                    <label className="block text-sm font-bold text-slate-700 mb-1">New Password</label>
-                                    <input
-                                        type="password"
-                                        className="w-full bg-white border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-[#009B9E] outline-none"
-                                        placeholder="Min. 8 characters"
-                                        value={newPassword}
-                                        onChange={e => setNewPassword(e.target.value)}
-                                        required
-                                    />
+                        {/* Pending Rewards Action */}
+                        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-between">
+                            <div>
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className="bg-green-100 p-2 rounded-lg text-green-600"><DollarSign size={20} /></div>
+                                    <span className="font-bold text-slate-700">Rewards</span>
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-bold text-slate-700 mb-1">Confirm New Password</label>
-                                    <input
-                                        type="password"
-                                        className="w-full bg-white border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-[#009B9E] outline-none"
-                                        placeholder="Re-enter password"
-                                        value={confirmPassword}
-                                        onChange={e => setConfirmPassword(e.target.value)}
-                                        required
-                                    />
-                                </div>
-                                <button
-                                    type="submit"
-                                    disabled={isProcessing}
-                                    className="bg-[#0F172A] hover:bg-slate-800 text-white font-bold py-3 px-6 rounded-xl transition flex items-center gap-2"
-                                >
-                                    {isProcessing ? <Loader2 className="animate-spin" size={18} /> : 'Update Password'}
-                                </button>
-                            </form>
-                        </div>
-
-                        <div className="text-center pt-8 border-t border-slate-200">
+                                <p className="text-3xl font-bold text-green-600 mb-1">${pendingRewards.toFixed(2)}</p>
+                                <p className="text-xs text-slate-400">Accumulated from rentals</p>
+                            </div>
                             <button
-                                onClick={logout}
-                                className="text-red-500 font-bold hover:bg-red-50 px-6 py-3 rounded-xl transition flex items-center justify-center gap-2 mx-auto"
+                                onClick={() => setClaimModalOpen(true)}
+                                disabled={pendingRewards <= 0.01}
+                                className={`w-full py-3 rounded-xl font-bold text-sm transition mt-4
+                                    ${pendingRewards > 0.01
+                                        ? "bg-green-500 hover:bg-green-600 text-white shadow-lg shadow-green-200"
+                                        : "bg-slate-100 text-slate-400 cursor-not-allowed"}`}
                             >
-                                <LogOut size={18} /> Sign Out
+                                Claim to Wallet
                             </button>
                         </div>
                     </div>
-                )}
+
+                    {/* 2. ASSETS LIST */}
+                    <h2 className="text-xl font-bold text-[#0F172A] mb-6 flex items-center gap-2">
+                        <PieChart className="text-[#009B9E]" /> Your Assets
+                    </h2>
+
+                    {data?.assets && data.assets.length > 0 ? (
+                        <div
+                            className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12"
+                            data-testid="portfolio-assets-list"
+                        >
+                            {data.assets.map((asset: any, index: number) => {
+                                const unitPrice = getUnitPrice(asset);
+                                const currentValue = asset.investedAmount * unitPrice;
+                                return (
+                                    <div
+                                        key={index}
+                                        className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 flex flex-col justify-between h-full hover:shadow-md transition group"
+                                        data-testid={`portfolio-asset-card-${asset.property_id}`}
+                                        data-asset-id={asset.id}
+                                        data-asset-property-id={asset.property_id}
+                                    >
+                                        <div>
+                                            <div className="flex justify-between items-start mb-4">
+                                                <div className="font-bold text-[#0F172A] text-lg group-hover:text-[#009B9E] transition">{asset.propertyName}</div>
+                                                <div className="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full font-bold">Active</div>
+                                            </div>
+                                            <div className="space-y-3 mb-6">
+                                                <div className="flex justify-between text-sm">
+                                                    <span className="text-slate-400">Tokens Owned</span>
+                                                    <span
+                                                        className="font-bold text-slate-700"
+                                                        data-testid={`portfolio-token-amount-${asset.property_id}`}
+                                                    >
+                                                        {asset.investedAmount.toFixed(2)}
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-between text-sm">
+                                                    <span className="text-slate-400">Current Value</span>
+                                                    <span className="font-bold text-[#0F172A]">${currentValue.toLocaleString()}</span>
+                                                </div>
+                                                <div className="flex justify-between text-sm">
+                                                    <span className="text-slate-400">Unclaimed Rent</span>
+                                                    <span className="font-bold text-green-600">+${(asset.unclaimed_rewards || 0).toFixed(4)}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <button onClick={() => { setSelectedAsset(asset); setSellModalOpen(true); }} className="w-full mt-auto bg-slate-50 hover:bg-slate-100 text-slate-600 font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 text-sm">
+                                            <ArrowDownCircle size={18} /> Sell Tokens
+                                        </button>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        <div
+                            className="text-center py-12 bg-white rounded-2xl border border-dashed border-slate-300 mb-12"
+                            data-testid="portfolio-empty-state"
+                        >
+                            <p className="text-slate-500">No active assets found. Start investing from the Marketplace!</p>
+                        </div>
+                    )}
+
+                    {/* 3. TRANSACTION HISTORY */}
+                    <div className="mb-12">
+                        <TransactionHistory />
+                    </div>
+                </div>
+
             </div>
 
             {/* --- MODALS --- */}
@@ -491,7 +375,7 @@ export default function Dashboard() {
                 </div>
             )}
 
-            {/* ✅ WITHDRAW MODAL - UPDATED (FEE CALCULATION) */}
+            {/* WITHDRAW MODAL */}
             {withdrawModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
                     <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative">
@@ -525,7 +409,7 @@ export default function Dashboard() {
                                 </div>
                             </div>
 
-                            {/* 💰 DYNAMIC FEE CALCULATION BOX */}
+                            {/* DYNAMIC FEE CALCULATION BOX */}
                             {wAmount > 0 && (
                                 <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 space-y-2">
                                     <div className="flex justify-between text-sm text-slate-500">

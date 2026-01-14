@@ -39,7 +39,10 @@ export const api = {
 
     // Fix: Backend usually requires both old and new password, so we accept 'data' object.
     changePassword: (data: any) =>
-        request("/auth/change-password", { method: "PUT", body: JSON.stringify(data) }),
+        request("/auth/change-password", { 
+            method: "PUT", 
+            body: JSON.stringify(data) 
+        }),
 
     // ============================
     // 🏠 MARKETPLACE & PORTFOLIO

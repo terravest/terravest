@@ -14,6 +14,7 @@ export default function Login() {
 
     const [isLoading, setIsLoading] = useState(false);
     const [identifier, setIdentifier] = useState('');
+    const [identifierType, setIdentifierType] = useState<'email' | 'username'>('email');
     const [password, setPassword] = useState('');
 
     // 2. New States
@@ -50,6 +51,7 @@ export default function Login() {
             // but it works on JS side. It's good to update api.ts.
             const response = await api.login({
                 identifier,
+                identifierType,
                 password,
                 turnstileToken,
                 rememberMe
@@ -81,6 +83,9 @@ export default function Login() {
                 errorMessage = error.message;
             }
             toast.error(errorMessage);
+
+            // Reset Turnstile on error
+            setTurnstileToken('');
 
             // Resetting Turnstile on error may be a good practice
             // (Manual reset may be needed if library doesn't do it automatically)
@@ -116,7 +121,11 @@ export default function Login() {
                                 placeholder="Email or Username"
                                 className="w-full bg-black/20 border border-white/10 rounded-lg py-3 pl-10 pr-4 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-[#00E5FF] focus:border-transparent transition-all"
                                 value={identifier}
-                                onChange={(e) => setIdentifier(e.target.value)}
+                                onChange={(e) => {
+                                const value = e.target.value;
+                                setIdentifier(value);
+                                setIdentifierType(value.includes('@') ? 'email' : 'username');
+                            }}
                                 required
                             />
                         </div>

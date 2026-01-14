@@ -41,7 +41,6 @@ export default function Register() {
         setIsLoading(true);
         toast.dismiss();
 
-        // Basic Client-side Validation
         if (password !== confirmPassword) {
             toast.error("Passwords do not match.");
             setIsLoading(false);
@@ -55,18 +54,13 @@ export default function Register() {
         }
 
         try {
-            // API Register Request
             const response = await api.register({ email, username, password });
 
-            // ✨ AUTO-LOGIN LOGIC
             if (response.token && response.user) {
-                // 3rd param (rememberMe) is false for registration
                 login(response.token, response.user, false);
-
                 toast.success("Account created successfully! 🎉");
                 navigate('/');
             } else {
-                // Fallback for older API versions
                 toast.success("Registration successful! Please log in.");
                 navigate('/login');
             }
@@ -92,24 +86,26 @@ export default function Register() {
 
     return (
         <div className="min-h-screen relative overflow-hidden bg-[#F9F7F3]">
-            {/* Navbar */}
             <div className="relative z-20"><Navbar /></div>
 
-            {/* Background Image & Overlay */}
             <div className="absolute inset-0 z-0" style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1535498730771-e735b998cd64?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80")', backgroundSize: 'cover', backgroundPosition: 'center', }}>
                 <div className="absolute inset-0 bg-[#009B9E]/80 mix-blend-multiply"></div>
             </div>
 
-            {/* Form Container */}
             <div className="relative z-10 flex items-center justify-center min-h-[calc(100vh-80px)] px-4 py-10">
                 <div className="w-full max-w-md p-8 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl shadow-2xl">
 
                     <div className="text-center mb-6">
                         <h1 className="text-4xl font-bold text-white tracking-tight mb-2">Join Terra<span className="text-[#00E5FF]">Vest</span></h1>
-                        <p className="text-gray-100">Create your account to start investing</p>
+                        <p className="text-gray-100 mb-3">Create your account to start investing</p>
+                        <div className="text-xs text-gray-200 space-y-1">
+                            <p>✔ Earn rent daily, visible monthly</p>
+                            <p>✔ U.S. LLC-backed properties</p>
+                            <p>✔ Start from $50 — no banks, no paperwork</p>
+                        </div>
                     </div>
 
-                    <form onSubmit={handleSubmit} className="space-y-5">
+                    <form onSubmit={handleSubmit} className="space-y-5" aria-busy={isLoading}>
                         <div className="relative">
                             <User className="absolute left-3 top-3.5 h-5 w-5 text-gray-300" />
                             <input
@@ -120,6 +116,7 @@ export default function Register() {
                                 onChange={(e) => setUsername(e.target.value)}
                                 required
                             />
+                            <p className="mt-1 text-xs text-gray-300">Public username. Must be unique — can be changed later.</p>
                         </div>
 
                         <div className="relative">
@@ -146,7 +143,6 @@ export default function Register() {
                             />
                         </div>
 
-                        {/* Password Requirements Checklist */}
                         <div className="bg-black/20 rounded-lg p-3 space-y-2">
                             <p className="text-xs text-gray-300 font-bold uppercase tracking-wider mb-2">Password Requirements:</p>
                             <RequirementItem met={passChecks.length} text="At least 8 characters" />
@@ -176,13 +172,23 @@ export default function Register() {
                         <button
                             type="submit"
                             disabled={isLoading}
-                            className="w-full bg-[#00E5FF] hover:bg-[#00c4d9] text-[#0F172A] font-bold py-3 rounded-lg shadow-lg transform transition hover:scale-[1.02] flex items-center justify-center gap-2"
+                            className="w-full bg-[#00E5FF] hover:bg-[#00c4d9] disabled:opacity-60 disabled:cursor-not-allowed text-[#0F172A] font-bold py-3 rounded-lg shadow-lg transform transition hover:scale-[1.02] flex items-center justify-center gap-2"
                         >
-                            {isLoading ? <Loader2 className="animate-spin h-5 w-5" /> : 'Create Account'}
+                            {isLoading ? (
+                                <>
+                                    <Loader2 className="animate-spin h-5 w-5" /> Creating account…
+                                </>
+                            ) : 'Create Account'}
                         </button>
                     </form>
 
+                    <p className="mt-4 text-[11px] text-gray-300 text-center leading-relaxed">
+                        By creating an account, you acknowledge that tokenized real estate investments involve risk. 
+                        <Link to="/learn" className="underline hover:text-white ml-1">Learn more</Link>
+                    </p>
+
                     <div className="mt-6 text-center">
+                        <p className="text-xs text-gray-300 mb-2">Trusted by investors from 40+ countries</p>
                         <p className="text-gray-200 text-sm">
                             Already have an account?
                             <Link to="/login" className="text-[#00E5FF] hover:text-white font-semibold ml-2 transition-colors inline-block ml-1">Log In</Link>

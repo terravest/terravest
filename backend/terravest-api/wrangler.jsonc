@@ -5,6 +5,8 @@
 	"compatibility_date": "2026-01-03",
 	"compatibility_flags": ["nodejs_compat"],
 
+	
+
 	"observability": {
 		"enabled": true
 	},
@@ -26,7 +28,8 @@
 		{
 			"binding": "terravest_db",
 			"database_name": "terravest-db",
-			"database_id": "c18f2c05-572c-465f-9b91-7d11d3928e70"
+			"database_id": "c18f2c05-572c-465f-9b91-7d11d3928e70",
+			"migrations_dir": "db/migrations"
 		}
 	],
 

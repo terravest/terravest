@@ -10,7 +10,7 @@ import bcrypt from "bcryptjs";
 import { rateLimiter } from "hono-rate-limiter";
 
 // Route handlers
-import { handleRegister, handleLogin, handleMe } from "./routes/auth";
+import { handleRegister, handleLogin, handleMe, handleCheckUsername, handleCheckEmail, handleForgotPassword, handleResetPassword } from "./routes/auth";
 import { handleProperties } from "./routes/properties";
 import { handlePortfolio } from "./routes/investments";
 import { handleBuy } from "./routes/buy";
@@ -113,18 +113,48 @@ let limiterMiddleware: any;
 const getLimiter = () => {
 	if (!limiterMiddleware) {
 		limiterMiddleware = rateLimiter({
-			windowMs: 15 * 60 * 1000,
-			limit: 10,
+			windowMs: 10 * 60 * 1000, // 10 minutes
+			limit: 5, // 5 attempts per 10 minutes (brute-force protection)
 			standardHeaders: true,
 			keyGenerator: (c) => c.req.header('CF-Connecting-IP') || "unknown",
-			message: { error: "Too many attempts, please try again later." }
+			message: { error: "TOO_MANY_ATTEMPTS" }
 		});
 	}
 	return limiterMiddleware;
 };
 
-app.use('/api/auth/*', async (c, next) => {
+app.use('/api/auth/login', async (c, next) => {
 	const limiter = getLimiter();
+	return limiter(c, next);
+});
+
+app.use('/api/auth/register', async (c, next) => {
+	const limiter = getLimiter();
+	return limiter(c, next);
+});
+
+// Rate limiting for availability endpoints (lighter: 60 requests per minute)
+let availabilityLimiterMiddleware: any;
+const getAvailabilityLimiter = () => {
+	if (!availabilityLimiterMiddleware) {
+		availabilityLimiterMiddleware = rateLimiter({
+			windowMs: 60 * 1000, // 1 minute
+			limit: 60,
+			standardHeaders: true,
+			keyGenerator: (c) => c.req.header('CF-Connecting-IP') || "unknown",
+			message: { error: "Too many requests, please try again later." }
+		});
+	}
+	return availabilityLimiterMiddleware;
+};
+
+app.use('/api/auth/check-username', async (c, next) => {
+	const limiter = getAvailabilityLimiter();
+	return limiter(c, next);
+});
+
+app.use('/api/auth/check-email', async (c, next) => {
+	const limiter = getAvailabilityLimiter();
 	return limiter(c, next);
 });
 
@@ -187,8 +217,12 @@ app.get('/api/accrue-rewards-all', async (c) => {
 // ==========================================
 // AUTHENTICATION ROUTES
 // ==========================================
+app.get('/api/auth/check-username', (c) => handleCheckUsername(c.req.raw, c.env));
+app.get('/api/auth/check-email', (c) => handleCheckEmail(c.req.raw, c.env));
 app.post('/api/auth/register', (c) => handleRegister(c.req.raw, c.env));
 app.post('/api/auth/login', (c) => handleLogin(c.req.raw, c.env));
+app.post('/api/auth/forgot-password', (c) => handleForgotPassword(c.req.raw, c.env));
+app.post('/api/auth/reset-password', (c) => handleResetPassword(c.req.raw, c.env));
 app.get('/api/auth/me', (c) => handleMe(c.req.raw, c.env));
 
 app.put('/api/auth/change-password', authMiddleware, async (c) => {

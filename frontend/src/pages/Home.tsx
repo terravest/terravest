@@ -22,9 +22,8 @@ export default function Home() {
                     <div className="absolute inset-0 bg-gradient-to-t from-[#0F172A] via-transparent to-transparent"></div>
                 </div>
 
-                {/* ✅ FIX: Same alignment as Navbar (max-w-7xl ...) */}
                 <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-                    <span className="inline-block py-1 px-3 rounded-full bg-[#009B9E]/10 border border-[#009B9E]/20 text-[#009B9E] font-bold text-xs tracking-widest uppercase mb-6 animate-fade-in">
+                    <span className="inline-block py-1 px-3 rounded-full bg-[#009B9E]/10 border border-[#009B9E]/20 text-[#009B9E] font-bold text-xs tracking-widest uppercase mb-6">
                         Real Estate Tokenization
                     </span>
 
@@ -60,7 +59,6 @@ export default function Home() {
 
             {/* --- STATS SECTION --- */}
             <section className="bg-[#0F172A] border-b border-white/10 py-10">
-                {/* ✅ FIX: Alignment */}
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
                         <div className="text-center">
@@ -85,7 +83,6 @@ export default function Home() {
 
             {/* --- FEATURES SECTION --- */}
             <section className="py-24 bg-white">
-                {/* ✅ FIX: Alignment */}
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center max-w-3xl mx-auto mb-16">
                         <h2 className="text-3xl font-bold text-[#0F172A] mb-4">Why TerraVest?</h2>
@@ -95,49 +92,45 @@ export default function Home() {
                     </div>
 
                     <div className="grid md:grid-cols-3 gap-8">
-                        {/* Feature 1 */}
-                        <div className="bg-[#F9F7F3] p-8 rounded-3xl border border-slate-100 hover:shadow-xl transition duration-300 group">
-                            <div className="bg-blue-100 w-14 h-14 rounded-2xl flex items-center justify-center mb-6 text-blue-600 group-hover:scale-110 transition">
+                        <div className="bg-[#F9F7F3] p-8 rounded-3xl border border-slate-100 hover:shadow-xl transition">
+                            <div className="bg-blue-100 w-14 h-14 rounded-2xl flex items-center justify-center mb-6 text-blue-600">
                                 <Wallet size={28} />
                             </div>
-                            <h3 className="text-xl font-bold text-[#0F172A] mb-3">Monthly Rent Payouts</h3>
+                            <h3 className="text-xl font-bold text-[#0F172A] mb-3">Monthly Rent Visibility</h3>
                             <p className="text-slate-600 leading-relaxed">
-                                Don't wait for monthly checks. Rental income is distributed automatically to your digital wallet every week via smart contracts.
+                                Rental income accrues daily based on your tokens and becomes visible in your dashboard at the beginning of each month.
                             </p>
                         </div>
 
-                        {/* Feature 2 */}
-                        <div className="bg-[#F9F7F3] p-8 rounded-3xl border border-slate-100 hover:shadow-xl transition duration-300 group">
-                            <div className="bg-orange-100 w-14 h-14 rounded-2xl flex items-center justify-center mb-6 text-orange-600 group-hover:scale-110 transition">
+                        <div className="bg-[#F9F7F3] p-8 rounded-3xl border border-slate-100 hover:shadow-xl transition">
+                            <div className="bg-orange-100 w-14 h-14 rounded-2xl flex items-center justify-center mb-6 text-orange-600">
                                 <ShieldCheck size={28} />
                             </div>
-                            <h3 className="text-xl font-bold text-[#0F172A] mb-3">Legal Compliance</h3>
+                            <h3 className="text-xl font-bold text-[#0F172A] mb-3">U.S. Legal Structure</h3>
                             <p className="text-slate-600 leading-relaxed">
-                                Every property is owned by a specific US LLC. Your tokens represent legal ownership shares in that LLC, compliant with US regulations.
+                                Each property is held by a dedicated U.S. LLC. Tokens represent indirect ownership rights, protected by U.S. property law.
                             </p>
                         </div>
 
-                        {/* Feature 3 */}
-                        <div className="bg-[#F9F7F3] p-8 rounded-3xl border border-slate-100 hover:shadow-xl transition duration-300 group">
-                            <div className="bg-green-100 w-14 h-14 rounded-2xl flex items-center justify-center mb-6 text-green-600 group-hover:scale-110 transition">
+                        <div className="bg-[#F9F7F3] p-8 rounded-3xl border border-slate-100 hover:shadow-xl transition">
+                            <div className="bg-green-100 w-14 h-14 rounded-2xl flex items-center justify-center mb-6 text-green-600">
                                 <TrendingUp size={28} />
                             </div>
-                            <h3 className="text-xl font-bold text-[#0F172A] mb-3">Instant Liquidity</h3>
+                            <h3 className="text-xl font-bold text-[#0F172A] mb-3">Secondary Market Liquidity</h3>
                             <p className="text-slate-600 leading-relaxed">
-                                Need your cash back? Sell your property tokens instantly on our secondary marketplace without waiting months for a buyer.
+                                Tokens can be sold on supported secondary markets, giving you flexibility without waiting months for a property sale.
                             </p>
                         </div>
                     </div>
                 </div>
             </section>
 
-            {/* --- CTA SECTION --- */}
+            {/* --- FINAL CTA --- */}
             <section className="py-20">
-                {/* ✅ FIX: Alignment */}
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="bg-[#0F172A] rounded-3xl p-12 md:p-16 text-center relative overflow-hidden">
                         <div className="absolute top-0 right-0 opacity-10 transform translate-x-1/3 -translate-y-1/3">
-                            <Building2 size={400} text-white />
+                            <Building2 size={400} />
                         </div>
 
                         <div className="relative z-10 max-w-2xl mx-auto">
@@ -145,11 +138,11 @@ export default function Home() {
                                 Ready to build your portfolio?
                             </h2>
                             <p className="text-slate-400 mb-8 text-lg">
-                                Join thousands of investors earning passive income from real estate today.
+                                Start earning daily rental income with monthly clarity.
                             </p>
                             <Link
                                 to="/marketplace"
-                                className="inline-flex items-center gap-2 bg-[#009B9E] hover:bg-[#00888a] text-white px-8 py-4 rounded-full font-bold text-lg transition shadow-lg shadow-[#009B9E]/25"
+                                className="inline-flex items-center gap-2 bg-[#009B9E] hover:bg-[#00888a] text-white px-8 py-4 rounded-full font-bold text-lg transition"
                             >
                                 Start Investing Now <ArrowRight size={20} />
                             </Link>

@@ -16,7 +16,6 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
 
-      // ✅ Sentry: env yoksa plugin eklenmez (Cloudflare build kırılmaz)
       ...(hasSentry
         ? [
           sentryVitePlugin({
@@ -27,7 +26,11 @@ export default defineConfig(({ mode }) => {
         ]
         : []),
     ],
-
+    
+    define: {
+      'import.meta.env.VITE_API_URL': JSON.stringify(env.VITE_API_URL || 'https://terravest-api.terravest.workers.dev/api'),
+      'import.meta.env.VITE_TURNSTILE_SITE_KEY': JSON.stringify(env.VITE_TURNSTILE_SITE_KEY),
+    },
     // ✅ Cloudflare Pages için ZORUNLU
     base: '/',
 

@@ -71,18 +71,13 @@ app.use('/*', async (c, next) => {
 
 	return cors({
 		origin: (origin) => {
-			// 1. Localhost İzinleri (Geliştirme Ortamı)
-			if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
-				return origin;
-			}
-
-			// 2. Production Frontend İzni (Kesin Eşleşme)
+			// Production Frontend İzni (Kesin Eşleşme)
 			// Not: Frontend URL'inin sonunda / veya /api OLMAMALIDIR.
 			if (origin === 'https://terravest-frontend.pages.dev') {
 				return origin;
 			}
 
-			// 3. Env Değişkeni Kontrolü (Yedek)
+			// Env Değişkeni Kontrolü (Yedek)
 			// Env'den gelen URL'in sonundaki /api veya trailing slash temizlenir
 			if (env.FRONTEND_URL) {
 				const cleanEnvUrl = env.FRONTEND_URL.replace(/\/$/, "").replace(/\/api$/, "");

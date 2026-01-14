@@ -101,7 +101,7 @@ export async function handleLogin(request: Request, env: Env): Promise<Response>
         // 🛡️ SECURITY STEP: TURNSTILE CHECK
         // ---------------------------------------------------------
         const turnstileToken = body.turnstileToken;
-        const ip = request.headers.get('CF-Connecting-IP') || "127.0.0.1";
+        const ip = request.headers.get('CF-Connecting-IP') || "";
 
         // Check if Secret Key is missing (Dev environment) or Token is empty
         if (env.TURNSTILE_SECRET) {

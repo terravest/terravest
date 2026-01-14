@@ -1,8 +1,7 @@
-import { API_BASE_URL } from '../config/api';
+// 🚨 PRODUCTION FIX: URL Hardcoded to bypass config errors
+const API_URL = "https://terravest-api.terravest.workers.dev/api";
 
-const API_URL = API_BASE_URL;
-
-// --- REQUEST HELPER (To avoid writing fetch repeatedly) ---
+// --- REQUEST HELPER ---
 const request = async (endpoint: string, options: RequestInit = {}) => {
     const token = localStorage.getItem("token");
     const headers = {
@@ -11,11 +10,20 @@ const request = async (endpoint: string, options: RequestInit = {}) => {
         ...options.headers,
     };
 
-    const response = await fetch(`${API_URL}${endpoint}`, { ...options, headers });
-    const data = await response.json();
+    // Endpoint başında / varsa ve API_URL de / ile bitiyorsa veya tam tersi durumlar için basit birleştirme
+    // Bizim yapımızda API_URL sonu /api, endpoint /auth... olduğu için direkt birleşebilir.
+    const url = `${API_URL}${endpoint}`;
+    const response = await fetch(url, { ...options, headers });
+
+    // Safety check: Handle 204 No Content or non-JSON responses gracefully
+    const contentType = response.headers.get("content-type");
+    let data = {};
+    if (contentType && contentType.includes("application/json")) {
+        data = await response.json();
+    }
 
     if (!response.ok) {
-        throw new Error(data.error || "API Request Failed");
+        throw new Error((data as any).error || (data as any).message || "API Request Failed");
     }
     return data;
 };
@@ -141,9 +149,14 @@ export const api = {
             body: formData,
         });
 
-        const data = await response.json();
+        const contentType = response.headers.get("content-type");
+        let data: any = {};
+        if (contentType && contentType.includes("application/json")) {
+            data = await response.json();
+        }
+
         if (!response.ok) {
-            throw new Error(data.error || "Upload failed");
+            throw new Error(data.error || data.message || "Upload failed");
         }
         return data;
     },

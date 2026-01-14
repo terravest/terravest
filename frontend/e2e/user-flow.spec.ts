@@ -1,5 +1,8 @@
 import { test, expect } from '@playwright/test';
 
+// Production API URL (localhost references removed)
+const API_BASE_URL = process.env.API_URL || 'https://terravest-api.terravest.workers.dev/api';
+
 test.describe('User Flow: Login → Deposit → Buy → Portfolio', () => {
   const testUser = {
     email: 'test@example.com',
@@ -68,7 +71,7 @@ test.describe('User Flow: Login → Deposit → Buy → Portfolio', () => {
     // ==========================================
     await test.step('Test state reset - Clean user test data', async () => {
       try {
-        const resetResp = await page.request.delete('http://127.0.0.1:8787/api/test/reset', {
+        const resetResp = await page.request.delete(`${API_BASE_URL}/test/reset`, {
           headers: authHeaders,
         });
 
@@ -99,7 +102,7 @@ test.describe('User Flow: Login → Deposit → Buy → Portfolio', () => {
     await test.step('Backend bakiyesini kontrol et ve gerekirse deposit tamamla', async () => {
       await page.goto('/dashboard');
 
-      const meResponse = await page.request.get('http://127.0.0.1:8787/api/auth/me', {
+      const meResponse = await page.request.get(`${API_BASE_URL}/auth/me`, {
         headers: authHeaders,
       });
 
@@ -147,7 +150,7 @@ test.describe('User Flow: Login → Deposit → Buy → Portfolio', () => {
       if (depositId) {
         try {
           const approveResponse = await page.request.post(
-            'http://127.0.0.1:8787/api/admin/approve-deposit',
+            `${API_BASE_URL}/admin/approve-deposit`,
             {
               headers: { ...authHeaders, 'Content-Type': 'application/json' },
               data: { depositId },
@@ -163,7 +166,7 @@ test.describe('User Flow: Login → Deposit → Buy → Portfolio', () => {
           console.log('⚠️ Admin approval failed (test user may not be admin):', error);
         }
 
-        const updatedMeResponse = await page.request.get('http://127.0.0.1:8787/api/auth/me', {
+        const updatedMeResponse = await page.request.get(`${API_BASE_URL}/auth/me`, {
           headers: authHeaders,
         });
 
@@ -188,7 +191,7 @@ test.describe('User Flow: Login → Deposit → Buy → Portfolio', () => {
       const marketplacePage = page.getByTestId('marketplace-page');
       await expect(marketplacePage).toBeVisible({ timeout: 10000 });
 
-      const propsResp = await page.request.get('http://127.0.0.1:8787/api/properties', {
+      const propsResp = await page.request.get(`${API_BASE_URL}/properties`, {
         headers: authHeaders,
       });
       expect(propsResp.ok()).toBeTruthy();
@@ -272,7 +275,7 @@ test.describe('User Flow: Login → Deposit → Buy → Portfolio', () => {
     let purchaseVerification: { propertyId: number; tokenAmount: number; apiSuccess: boolean } | null = null;
 
     await test.step('Token satın al ve başarıyı doğrula', async () => {
-      const meResponseBeforeBuy = await page.request.get('http://127.0.0.1:8787/api/auth/me', {
+      const meResponseBeforeBuy = await page.request.get(`${API_BASE_URL}/auth/me`, {
         headers: authHeaders,
       });
       const userDataBeforeBuy = await meResponseBeforeBuy.json();

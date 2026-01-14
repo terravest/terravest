@@ -16,6 +16,8 @@ const Settings = lazy(() => import('./pages/Settings'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Marketplace = lazy(() => import('./pages/Marketplace'));
 const PropertyDetails = lazy(() => import('./pages/PropertyDetails'));
+const Learn = lazy(() => import('./pages/Learn'));
+const About = lazy(() => import('./pages/About'));
 
 // PAGES (Admin) - Lazy Load
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
@@ -45,6 +47,9 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+
+            <Route path="/about" element={<About />} />
+            <Route path="/learn" element={<Learn />} />
 
             {/* USER DASHBOARD */}
             <Route path="/dashboard" element={<Dashboard />} />

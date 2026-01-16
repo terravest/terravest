@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { CheckCircle, Clock, ExternalLink, RefreshCw, Hash, DollarSign, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api } from '../../lib/api';
+import { formatCurrency, formatDate } from '../../utils/format';
 
 // Backend'den gelen veriye tam uygun Interface
 interface Withdrawal {
@@ -17,6 +18,7 @@ interface Withdrawal {
 }
 
 export default function AdminWithdrawals() {
+    const lang = 'en' as const;
     const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
     const [loading, setLoading] = useState(true);
     const [processingId, setProcessingId] = useState<number | null>(null);
@@ -125,7 +127,7 @@ export default function AdminWithdrawals() {
                                         <td className="px-6 py-4">
                                             <span className="font-mono text-xs text-slate-500">#{w.id}</span>
                                             <div className="text-xs text-slate-400 mt-1">
-                                                {w.created_at ? new Date(w.created_at).toLocaleDateString() : '-'}
+                                                {w.created_at ? formatDate(w.created_at, lang) : '-'}
                                             </div>
                                         </td>
 
@@ -138,7 +140,7 @@ export default function AdminWithdrawals() {
                                         {/* 3. AMOUNT */}
                                         <td className="px-6 py-4">
                                             {/* Güvenli Erişim: w.amount undefined ise 0 göster */}
-                                            <div className="font-bold text-red-600">-${(w.amount || 0).toLocaleString()}</div>
+                                            <div className="font-bold text-red-600">-{formatCurrency(w.amount || 0, lang)}</div>
                                         </td>
 
                                         {/* 4. ADDRESS */}

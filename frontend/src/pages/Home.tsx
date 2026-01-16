@@ -2,9 +2,20 @@ import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import { ArrowRight, Building2, TrendingUp, ShieldCheck, Wallet } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useContext } from 'react';
+import { LanguageContext } from '../App';
+import { content } from '../content';
 
 export default function Home() {
     const { user } = useAuth();
+    const lang = useContext(LanguageContext);
+    const t = content[lang];
+
+    const getLink = (path: string) => {
+        const normalized = path.startsWith('/') ? path : `/${path}`;
+        if (lang === 'en') return normalized;
+        return normalized === '/' ? `/${lang}` : `/${lang}${normalized}`;
+    };
 
     return (
         <div className="min-h-screen bg-[#F9F7F3] font-sans pb-20">
@@ -16,7 +27,7 @@ export default function Home() {
                 <div className="absolute inset-0 z-0 opacity-20 pointer-events-none">
                     <img
                         src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80"
-                        alt="Background"
+                        alt={t.home.heroBackgroundAlt}
                         className="w-full h-full object-cover"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-[#0F172A] via-transparent to-transparent"></div>
@@ -24,33 +35,33 @@ export default function Home() {
 
                 <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
                     <span className="inline-block py-1 px-3 rounded-full bg-[#009B9E]/10 border border-[#009B9E]/20 text-[#009B9E] font-bold text-xs tracking-widest uppercase mb-6">
-                        Real Estate Tokenization
+                        {t.home.heroBadge}
                     </span>
 
                     <h1 className="text-5xl md:text-7xl font-black text-white mb-8 leading-tight tracking-tight">
-                        Invest in American <br />
+                        {t.home.heroTitleLine1} <br />
                         <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#009B9E] to-[#2DD4BF]">
-                            Real Estate
-                        </span> from $50
+                            {t.home.heroTitleHighlight}
+                        </span> {t.home.heroTitleLine2}
                     </h1>
 
                     <p className="text-xl text-slate-400 mb-10 max-w-2xl mx-auto leading-relaxed">
-                        Join the future of investment. Own fractional shares of high-yield rental properties on the blockchain. Receive monthly rent directly to your wallet.
+                        {t.home.heroSubtitle}
                     </p>
 
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                         <Link
-                            to="/marketplace"
+                            to={getLink('/marketplace')}
                             className="w-full sm:w-auto bg-[#009B9E] hover:bg-[#00888a] text-white px-8 py-4 rounded-full font-bold text-lg transition transform hover:scale-105 shadow-lg shadow-[#009B9E]/25 flex items-center justify-center gap-2"
                         >
-                            View Properties <ArrowRight size={20} />
+                            {t.home.heroCtaPrimary} <ArrowRight size={20} />
                         </Link>
                         {!user && (
                             <Link
-                                to="/register"
+                                to={getLink('/register')}
                                 className="w-full sm:w-auto bg-white/10 hover:bg-white/20 text-white border border-white/10 px-8 py-4 rounded-full font-bold text-lg transition backdrop-blur-sm"
                             >
-                                Create Account
+                                {t.home.heroCtaSecondary}
                             </Link>
                         )}
                     </div>

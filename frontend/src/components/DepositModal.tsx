@@ -1,10 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { X, Bitcoin, Loader2, ArrowRight, RefreshCw, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PaymentModal from './PaymentModal';
 import { useAuth } from '../context/AuthContext';
 import { useQueryClient } from '@tanstack/react-query'; // 1. Import
 import { API_BASE_URL } from '../config/api';
+import { LanguageContext } from '../App';
+import { content } from '../content';
+import { formatCurrency } from '../utils/format';
 
 interface DepositModalProps {
     onClose: () => void;
@@ -13,6 +16,8 @@ interface DepositModalProps {
 
 export default function DepositModal({ onClose, onSuccess }: DepositModalProps) {
     const { user } = useAuth();
+    const lang = useContext(LanguageContext);
+    const t = content[lang];
     const [amount, setAmount] = useState('');
     const [btcPrice, setBtcPrice] = useState<number | null>(null);
     const [isLoading, setIsLoading] = useState(false);
@@ -41,7 +46,9 @@ export default function DepositModal({ onClose, onSuccess }: DepositModalProps) 
     }, []);
 
     // Estimated BTC Calculation
+    const minDepositAmount = 10;
     const usdAmount = parseFloat(amount) || 0;
+    const minDepositLabel = formatCurrency(minDepositAmount, lang);
     const estimatedBtc = btcPrice ? (usdAmount / btcPrice).toFixed(8) : "---";
 
     const handleCreateOrder = async (e: React.FormEvent) => {
@@ -50,14 +57,14 @@ export default function DepositModal({ onClose, onSuccess }: DepositModalProps) 
         // 🔍 DEBUG: Check user
         console.log("👤 Current User:", user);
 
-        if (!usdAmount || usdAmount < 10) {
-            return toast.error("Minimum deposit is $10");
+        if (!usdAmount || usdAmount < minDepositAmount) {
+            return toast.error(t.depositModal.toastMinimumDeposit.replace('{min}', minDepositLabel));
         }
 
         // 🛡️ SECURITY CHECK
         if (!user || !user.id) {
             console.error("❌ ERROR: User ID not found!", user);
-            toast.error("Session information could not be read. Please refresh the page and log in again.");
+            toast.error(t.depositModal.toastSessionError);
             return;
         }
 
@@ -88,14 +95,14 @@ export default function DepositModal({ onClose, onSuccess }: DepositModalProps) 
                 // Thanks to this line, "Pending" transaction appears immediately in the table.
                 queryClient.invalidateQueries({ queryKey: ['transactions'] });
 
-                toast.success("Deposit address generated!");
+                toast.success(t.depositModal.toastAddressGenerated);
             } else {
-                throw new Error(data.error || "Expected response from server did not arrive.");
+                throw new Error(data.error || t.depositModal.toastCreateOrderFailed);
             }
 
         } catch (error: any) {
             console.error("Deposit Error:", error);
-            toast.error(error.message || "Failed to create order. Is backend running?");
+            toast.error(error.message || t.depositModal.toastCreateOrderFailed);
         } finally {
             setIsLoading(false);
         }
@@ -117,20 +124,22 @@ export default function DepositModal({ onClose, onSuccess }: DepositModalProps) 
                     <div className="bg-[#F7931A]/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-[#F7931A]">
                         <Bitcoin size={32} />
                     </div>
-                    <h2 className="text-2xl font-bold text-slate-900">Deposit Funds</h2>
-                    <p className="text-slate-500 mt-1">Add USD to your wallet via Bitcoin.</p>
+                    <h2 className="text-2xl font-bold text-slate-900">{t.depositModal.title}</h2>
+                    <p className="text-slate-500 mt-1">{t.depositModal.subtitle}</p>
                 </div>
 
                 <form onSubmit={handleCreateOrder} className="space-y-6">
                     <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-2 uppercase tracking-wide">Amount to Deposit (USD)</label>
+                        <label className="block text-sm font-bold text-slate-700 mb-2 uppercase tracking-wide">
+                            {t.depositModal.amountLabel}
+                        </label>
                         <div className="relative group">
                             <span className="absolute left-4 top-3.5 text-slate-400 font-bold text-xl">$</span>
                             <input
                                 type="number"
                                 min="10"
                                 step="1"
-                                placeholder="100"
+                                placeholder={t.depositModal.amountPlaceholder}
                                 className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-8 pr-4 text-slate-900 font-bold text-xl focus:ring-2 focus:ring-[#009B9E] outline-none transition-all"
                                 value={amount}
                                 onChange={(e) => setAmount(e.target.value)}
@@ -143,7 +152,7 @@ export default function DepositModal({ onClose, onSuccess }: DepositModalProps) 
                             <div className="flex items-center justify-between gap-2 mt-3 text-sm text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-100">
                                 <div className="flex items-center gap-2">
                                     <RefreshCw size={14} className="text-slate-400" />
-                                    <span>Est. Payment:</span>
+                                    <span>{t.depositModal.estPaymentLabel}</span>
                                 </div>
                                 <span className="font-mono font-bold text-[#F7931A] text-base">≈ {estimatedBtc} BTC</span>
                             </div>
@@ -154,25 +163,25 @@ export default function DepositModal({ onClose, onSuccess }: DepositModalProps) 
                         <div className="flex items-start gap-2 mt-4 bg-blue-50 p-3 rounded-lg">
                             <AlertCircle size={16} className="text-blue-500 mt-0.5 flex-shrink-0" />
                             <p className="text-xs text-blue-700 leading-relaxed">
-                                Minimum deposit amount is <strong>$10.00</strong>. Your balance will be updated automatically after 1 network confirmation.
+                                {t.depositModal.minDepositNote.replace('{min}', minDepositLabel)}
                             </p>
                         </div>
                     </div>
 
                     <button
                         type="submit"
-                        disabled={isLoading || !amount || parseFloat(amount) < 10}
+                        disabled={isLoading || !amount || parseFloat(amount) < minDepositAmount}
                         className="w-full bg-[#0F172A] hover:bg-slate-800 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all transform active:scale-[0.98]"
                         data-testid="deposit-submit-button"
                     >
                         {isLoading ? (
                             <>
                                 <Loader2 className="animate-spin" size={20} />
-                                <span>Generating Address...</span>
+                                <span>{t.depositModal.submitLoading}</span>
                             </>
                         ) : (
                             <>
-                                <span>Continue</span>
+                                <span>{t.depositModal.submitContinue}</span>
                                 <ArrowRight size={18} />
                             </>
                         )}

@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useContext } from 'react';
 import { X, Wallet, AlertTriangle, Loader2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../lib/api';
 import { useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
+import { LanguageContext } from '../App';
+import { formatCurrency } from '../utils/format';
 
 interface BuyModalProps {
     property: any;
@@ -14,6 +16,7 @@ interface BuyModalProps {
 export default function BuyModal({ property, onClose, onSuccess }: BuyModalProps) {
     const { user, refreshUser } = useAuth(); // Required to update balance
     const queryClient = useQueryClient(); // To invalidate portfolio cache
+    const lang = useContext(LanguageContext);
     const [amount, setAmount] = useState('1');
     const [isProcessing, setIsProcessing] = useState(false);
 
@@ -96,7 +99,7 @@ export default function BuyModal({ property, onClose, onSuccess }: BuyModalProps
 
                     <div className="flex justify-between items-center text-sm">
                         <span className="text-slate-500">Property Price</span>
-                        <span className="font-medium text-slate-700">${rawPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        <span className="font-medium text-slate-700">{formatCurrency(rawPrice, lang)}</span>
                     </div>
 
                     {/* COMMISSION DISPLAY */}
@@ -105,12 +108,12 @@ export default function BuyModal({ property, onClose, onSuccess }: BuyModalProps
                             <span>Trading Fee</span>
                             <span className="bg-slate-200 text-slate-600 text-[10px] px-1.5 py-0.5 rounded font-bold">1.5%</span>
                         </div>
-                        <span className="font-medium text-slate-600">+ ${fee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        <span className="font-medium text-slate-600">+ {formatCurrency(fee, lang)}</span>
                     </div>
 
                     <div className="border-t border-slate-200 pt-3 flex justify-between items-center">
                         <span className="text-slate-900 font-bold">Total Pay</span>
-                        <span className="text-xl font-extrabold text-[#0F172A]">${totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        <span className="text-xl font-extrabold text-[#0F172A]">{formatCurrency(totalCost, lang)}</span>
                     </div>
                 </div>
 
@@ -120,12 +123,16 @@ export default function BuyModal({ property, onClose, onSuccess }: BuyModalProps
                     <div className="flex-1">
                         <div className="flex justify-between items-center mb-1">
                             <p className="text-xs font-bold uppercase opacity-80">Wallet Balance</p>
-                            <p className="font-bold">${currentBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                            <p className="font-bold">{formatCurrency(currentBalance, lang)}</p>
                         </div>
                         {isInsufficientFunds ? (
-                            <p className="text-xs font-medium">You need <span className="font-bold">${(totalCost - currentBalance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span> more.</p>
+                            <p className="text-xs font-medium">
+                                You need <span className="font-bold">{formatCurrency(totalCost - currentBalance, lang)}</span> more.
+                            </p>
                         ) : (
-                            <p className="text-xs font-medium">Remaining: <span className="font-bold">${remainingBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></p>
+                            <p className="text-xs font-medium">
+                                Remaining: <span className="font-bold">{formatCurrency(remainingBalance, lang)}</span>
+                            </p>
                         )}
                     </div>
                 </div>

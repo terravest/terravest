@@ -1,14 +1,24 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Mail, Lock, Loader2, Check, X, CheckCircle, User } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import Navbar from '../components/Navbar';
-import { useAuth } from '../context/AuthContext'; // ✅ Added useAuth
+import { useAuth } from '../context/AuthContext'; // Added useAuth
 import toast from 'react-hot-toast';
+import { LanguageContext } from '../App';
+import { content } from '../content';
 
 export default function Register() {
     const navigate = useNavigate();
-    const { login } = useAuth(); // ✅ Get login function from context
+    const { login } = useAuth(); // Get login function from context
+    const lang = useContext(LanguageContext);
+    const t = content[lang];
+
+    const getLink = (path: string) => {
+        const normalized = path.startsWith('/') ? path : `/${path}`;
+        if (lang === 'en') return normalized;
+        return normalized === '/' ? `/${lang}` : `/${lang}${normalized}`;
+    };
 
     const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
@@ -42,13 +52,13 @@ export default function Register() {
         toast.dismiss();
 
         if (password !== confirmPassword) {
-            toast.error("Passwords do not match.");
+            toast.error(t.auth.toastRegisterMismatch);
             setIsLoading(false);
             return;
         }
 
         if (!Object.values(passChecks).every(Boolean)) {
-            toast.error("Please meet all password requirements.");
+            toast.error(t.auth.toastRegisterRequirements);
             setIsLoading(false);
             return;
         }
@@ -58,11 +68,11 @@ export default function Register() {
 
             if (response.token && response.user) {
                 login(response.token, response.user, false);
-                toast.success("Account created successfully! 🎉");
-                navigate('/');
+                toast.success(t.auth.toastRegisterCreated);
+                navigate(getLink('/'));
             } else {
-                toast.success("Registration successful! Please log in.");
-                navigate('/login');
+                toast.success(t.auth.toastRegisterSuccessLogin);
+                navigate(getLink('/login'));
             }
 
         } catch (error: any) {
@@ -96,12 +106,12 @@ export default function Register() {
                 <div className="w-full max-w-md p-8 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl shadow-2xl">
 
                     <div className="text-center mb-6">
-                        <h1 className="text-4xl font-bold text-white tracking-tight mb-2">Join Terra<span className="text-[#00E5FF]">Vest</span></h1>
-                        <p className="text-gray-100 mb-3">Create your account to start investing</p>
+                        <h1 className="text-4xl font-bold text-white tracking-tight mb-2">{t.auth.registerTitlePrefix} <span className="text-[#00E5FF]">{t.auth.registerTitleBrand}</span></h1>
+                        <p className="text-gray-100 mb-3">{t.auth.registerSubtitle}</p>
                         <div className="text-xs text-gray-200 space-y-1">
-                            <p>✔ Earn rent daily, visible monthly</p>
-                            <p>✔ U.S. LLC-backed properties</p>
-                            <p>✔ Start from $50 — no banks, no paperwork</p>
+                            <p>* {t.auth.registerBullet1}</p>
+                            <p>* {t.auth.registerBullet2}</p>
+                            <p>* {t.auth.registerBullet3}</p>
                         </div>
                     </div>
 
@@ -110,20 +120,20 @@ export default function Register() {
                             <User className="absolute left-3 top-3.5 h-5 w-5 text-gray-300" />
                             <input
                                 type="text"
-                                placeholder="Username"
+                                placeholder={t.auth.registerUsernamePlaceholder}
                                 className="w-full bg-black/20 border border-white/10 rounded-lg py-3 pl-10 pr-4 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-[#00E5FF] focus:border-transparent transition-all"
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}
                                 required
                             />
-                            <p className="mt-1 text-xs text-gray-300">Public username. Must be unique — can be changed later.</p>
+                            <p className="mt-1 text-xs text-gray-300">{t.auth.registerUsernameHint}</p>
                         </div>
 
                         <div className="relative">
                             <Mail className="absolute left-3 top-3.5 h-5 w-5 text-gray-300" />
                             <input
                                 type="email"
-                                placeholder="Email Address"
+                                placeholder={t.auth.registerEmailPlaceholder}
                                 className="w-full bg-black/20 border border-white/10 rounded-lg py-3 pl-10 pr-4 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-[#00E5FF] focus:border-transparent transition-all"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
@@ -135,7 +145,7 @@ export default function Register() {
                             <Lock className="absolute left-3 top-3.5 h-5 w-5 text-gray-300" />
                             <input
                                 type="password"
-                                placeholder="Password"
+                                placeholder={t.auth.registerPasswordPlaceholder}
                                 className="w-full bg-black/20 border border-white/10 rounded-lg py-3 pl-10 pr-4 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-[#00E5FF] focus:border-transparent transition-all"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
@@ -144,19 +154,19 @@ export default function Register() {
                         </div>
 
                         <div className="bg-black/20 rounded-lg p-3 space-y-2">
-                            <p className="text-xs text-gray-300 font-bold uppercase tracking-wider mb-2">Password Requirements:</p>
-                            <RequirementItem met={passChecks.length} text="At least 8 characters" />
-                            <RequirementItem met={passChecks.upper} text="At least one uppercase letter (A-Z)" />
-                            <RequirementItem met={passChecks.lower} text="At least one lowercase letter (a-z)" />
-                            <RequirementItem met={passChecks.number} text="At least one number (0-9)" />
-                            <RequirementItem met={passChecks.special} text="At least one special character (!@#$)" />
+                            <p className="text-xs text-gray-300 font-bold uppercase tracking-wider mb-2">{t.auth.registerPasswordRequirementsTitle}</p>
+                            <RequirementItem met={passChecks.length} text={t.auth.registerRequirementLength} />
+                            <RequirementItem met={passChecks.upper} text={t.auth.registerRequirementUpper} />
+                            <RequirementItem met={passChecks.lower} text={t.auth.registerRequirementLower} />
+                            <RequirementItem met={passChecks.number} text={t.auth.registerRequirementNumber} />
+                            <RequirementItem met={passChecks.special} text={t.auth.registerRequirementSpecial} />
                         </div>
 
                         <div className="relative">
                             <Lock className="absolute left-3 top-3.5 h-5 w-5 text-gray-300" />
                             <input
                                 type="password"
-                                placeholder="Confirm Password"
+                                placeholder={t.auth.registerConfirmPasswordPlaceholder}
                                 className={`w-full bg-black/20 border rounded-lg py-3 pl-10 pr-4 text-white placeholder-gray-300 focus:outline-none focus:ring-2 transition-all ${confirmPassword && password !== confirmPassword ? 'border-red-400 focus:ring-red-400' : 'border-white/10 focus:ring-[#00E5FF]'}`}
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
@@ -176,22 +186,22 @@ export default function Register() {
                         >
                             {isLoading ? (
                                 <>
-                                    <Loader2 className="animate-spin h-5 w-5" /> Creating account…
+                                    <Loader2 className="animate-spin h-5 w-5" /> {t.auth.registerButtonLoading}
                                 </>
-                            ) : 'Create Account'}
+                            ) : t.auth.registerButton}
                         </button>
                     </form>
 
                     <p className="mt-4 text-[11px] text-gray-300 text-center leading-relaxed">
-                        By creating an account, you acknowledge that tokenized real estate investments involve risk. 
-                        <Link to="/learn" className="underline hover:text-white ml-1">Learn more</Link>
+                        {t.auth.registerTerms}
+                        <Link to={getLink('/learn')} className="underline hover:text-white ml-1">{t.auth.registerTermsLink}</Link>
                     </p>
 
                     <div className="mt-6 text-center">
-                        <p className="text-xs text-gray-300 mb-2">Trusted by investors from 40+ countries</p>
+                        <p className="text-xs text-gray-300 mb-2">{t.auth.registerTrustedBy}</p>
                         <p className="text-gray-200 text-sm">
-                            Already have an account?
-                            <Link to="/login" className="text-[#00E5FF] hover:text-white font-semibold ml-2 transition-colors inline-block ml-1">Log In</Link>
+                            {t.auth.registerHaveAccount}
+                            <Link to={getLink('/login')} className="text-[#00E5FF] hover:text-white font-semibold ml-2 transition-colors inline-block ml-1">{t.auth.registerLoginLink}</Link>
                         </p>
                     </div>
                 </div>

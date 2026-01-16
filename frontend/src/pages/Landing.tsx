@@ -1,8 +1,20 @@
 import Navbar from '../components/Navbar';
 import { ArrowRight, Building2, TrendingUp, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useContext } from 'react';
+import { LanguageContext } from '../App';
+import { content } from '../content';
 
 export default function Landing() {
+    const lang = useContext(LanguageContext);
+    const t = content[lang];
+
+    const getLink = (path: string) => {
+        const normalized = path.startsWith('/') ? path : `/${path}`;
+        if (lang === 'en') return normalized;
+        return normalized === '/' ? `/${lang}` : `/${lang}${normalized}`;
+    };
+
     return (
         // ARKA PLAN: Sıcak Kum Rengi (#F9F7F3)
         <div className="min-h-screen bg-[#F9F7F3] text-slate-800 font-sans">
@@ -13,7 +25,7 @@ export default function Landing() {
                 <div className="absolute inset-0 z-0">
                     <img
                         src="https://images.unsplash.com/photo-1535498730771-e735b998cd64?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80"
-                        alt="Miami Real Estate"
+                        alt={t.landing.heroImageAlt}
                         className="w-full h-full object-cover"
                     />
                     {/* GRADIENT: Okyanus Turkuazından Şeffafa */}
@@ -31,10 +43,10 @@ export default function Landing() {
                         </p>
                         <div className="flex gap-4 pt-4">
                             {/* BUTON: Canlı Mercan Rengi */}
-                            <Link to="/login" className="bg-[#FF6B6B] hover:bg-[#E85555] text-white px-8 py-4 rounded-full font-bold transition shadow-lg hover:shadow-xl flex items-center gap-2 transform hover:-translate-y-1">
+                            <Link to={getLink('/login')} className="bg-[#FF6B6B] hover:bg-[#E85555] text-white px-8 py-4 rounded-full font-bold transition shadow-lg hover:shadow-xl flex items-center gap-2 transform hover:-translate-y-1">
                                 Get Started <ArrowRight size={20} />
                             </Link>
-                            <Link to="/marketplace" className="bg-white/20 hover:bg-white/30 text-white border border-white/40 px-8 py-4 rounded-full font-bold transition backdrop-blur-sm">
+                            <Link to={getLink('/marketplace')} className="bg-white/20 hover:bg-white/30 text-white border border-white/40 px-8 py-4 rounded-full font-bold transition backdrop-blur-sm">
                                 View Properties
                             </Link>
                         </div>
@@ -96,7 +108,7 @@ export default function Landing() {
                     </div>
 
                     <div className="text-center mt-12">
-                        <Link to="/marketplace" className="text-[#009B9E] font-bold hover:text-[#007b7d] hover:underline text-lg transition-colors">
+                        <Link to={getLink('/marketplace')} className="text-[#009B9E] font-bold hover:text-[#007b7d] hover:underline text-lg transition-colors">
                             View All Properties &rarr;
                         </Link>
                     </div>
@@ -140,7 +152,11 @@ export default function Landing() {
                         </div>
                     </div>
                     <div className="relative">
-                        <img src="https://realt.co/wp-content/uploads/2019/04/hero-block-stacking.png" alt="Tokenization" className="w-full drop-shadow-2xl" />
+                        <img
+                            src="https://realt.co/wp-content/uploads/2019/04/hero-block-stacking.png"
+                            alt={t.landing.tokenizationImageAlt}
+                            className="w-full drop-shadow-2xl"
+                        />
                     </div>
                 </div>
             </section>

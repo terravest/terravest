@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import { api } from '../lib/api';
@@ -13,18 +13,29 @@ import PaymentModal from '../components/PaymentModal';
 import TransactionHistory from '../components/TransactionHistory';
 import toast from 'react-hot-toast';
 import { API_BASE_URL } from '../config/api';
+import { LanguageContext } from '../App';
+import { content } from '../content';
+import { formatCurrency, formatNumber } from '../utils/format';
 
 export default function Dashboard() {
     const { user, refreshUser } = useAuth();
     const navigate = useNavigate();
     const queryClient = useQueryClient();
+    const lang = useContext(LanguageContext);
+    const t = content[lang];
 
-    // --- 🔒 SECURITY CHECK (REDIRECT) ---
+    const getLink = (path: string) => {
+        const normalized = path.startsWith('/') ? path : `/${path}`;
+        if (lang === 'en') return normalized;
+        return normalized === '/' ? `/${lang}` : `/${lang}${normalized}`;
+    };
+
+    // --- SECURITY CHECK (REDIRECT) ---
     useEffect(() => {
         if (!user) {
-            navigate('/login');
+            navigate(getLink('/login'));
         }
-    }, [user, navigate]);
+    }, [user, navigate, lang]);
 
     // Show loading if user data hasn't loaded yet
     if (!user) {
@@ -88,7 +99,7 @@ export default function Dashboard() {
                 property_id: selectedAsset.property_id || selectedAsset.id,
                 token_amount: parseFloat(sellAmount)
             });
-            toast.success("Asset sold! Funds added to your USD balance.");
+            toast.success(t.dashboard.toastSellSuccess);
             setSellModalOpen(false);
             setSellAmount('');
             refetch();
@@ -104,7 +115,11 @@ export default function Dashboard() {
         setIsProcessing(true);
         try {
             const res = await api.claimRewards();
-            toast.success(`Claimed $${res.amount_claimed.toFixed(2)} to your balance!`);
+            const claimMessage = t.dashboard.toastClaimSuccess.replace(
+                '${amount}',
+                formatCurrency(res.amount_claimed, lang)
+            );
+            toast.success(claimMessage);
             setClaimModalOpen(false);
             refetch();
             if (refreshUser) refreshUser();
@@ -119,9 +134,9 @@ export default function Dashboard() {
         e.preventDefault();
         const amount = parseFloat(withdrawAmount);
 
-        if (amount < 50) return toast.error("Minimum withdrawal is $50");
-        if (amount > cashBalance) return toast.error("Insufficient cash balance");
-        if (withdrawAddress.length < 10) return toast.error("Invalid BTC address");
+        if (amount < 50) return toast.error(t.dashboard.toastMinWithdrawal);
+        if (amount > cashBalance) return toast.error(t.dashboard.toastInsufficientCash);
+        if (withdrawAddress.length < 10) return toast.error(t.dashboard.toastInvalidBtc);
 
         setIsProcessing(true);
         try {
@@ -135,9 +150,9 @@ export default function Dashboard() {
             const json = await res.json();
             if (!res.ok) throw new Error(json.error);
 
-            toast.success("Withdrawal request submitted! Pending Admin Approval.");
+            toast.success(t.dashboard.toastWithdrawRequest);
 
-            // ✅ ON SUCCESS:
+            // On success:
             setWithdrawModalOpen(false);
             setWithdrawAmount('');
             setWithdrawAddress('');
@@ -164,8 +179,8 @@ export default function Dashboard() {
 
                 {/* --- HEADER --- */}
                 <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-[#0F172A]">My Portfolio</h1>
-                    <p className="text-slate-500 mt-1">Welcome back, <span className="font-bold text-[#0F172A]">{user?.username || user?.email?.split('@')[0]}</span></p>
+                    <h1 className="text-3xl font-bold text-[#0F172A]">{t.dashboard.title}</h1>
+                    <p className="text-slate-500 mt-1">{t.dashboard.welcomeBack}, <span className="font-bold text-[#0F172A]">{user?.username || user?.email?.split('@')[0]}</span></p>
                 </div>
 
                 {/* ==================== PORTFOLIO CONTENT ==================== */}
@@ -185,10 +200,10 @@ export default function Dashboard() {
                                     <div>
                                         <div className="flex items-center gap-3 mb-2 opacity-80">
                                             <TrendingUp size={20} className="text-[#00E5FF]" />
-                                            <span className="text-sm font-bold tracking-widest uppercase">Total Net Worth</span>
+                                            <span className="text-sm font-bold tracking-widest uppercase">{t.dashboard.totalNetWorth}</span>
                                         </div>
                                         <h2 className="text-5xl font-black tracking-tight mb-8">
-                                            ${totalNetWorth.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            {formatCurrency(totalNetWorth, lang)}
                                         </h2>
                                     </div>
                                     {/* WITHDRAW BUTTON */}
@@ -196,23 +211,23 @@ export default function Dashboard() {
                                         onClick={() => setWithdrawModalOpen(true)}
                                         className="bg-white/10 hover:bg-white/20 border border-white/10 text-white px-4 py-2 rounded-xl text-sm font-bold transition flex items-center gap-2 backdrop-blur-sm"
                                     >
-                                        <ArrowUpRight size={16} /> Withdraw
+                                        <ArrowUpRight size={16} /> {t.dashboard.withdraw}
                                     </button>
                                 </div>
 
                                 {/* Breakdown */}
                                 <div className="grid grid-cols-3 gap-6 border-t border-white/10 pt-6">
                                     <div>
-                                        <p className="text-xs text-slate-400 font-bold uppercase mb-1">Cash Balance</p>
-                                        <p className="text-xl font-bold">${cashBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                                        <p className="text-xs text-slate-400 font-bold uppercase mb-1">{t.dashboard.cashBalance}</p>
+                                        <p className="text-xl font-bold">{formatCurrency(cashBalance, lang)}</p>
                                     </div>
                                     <div>
-                                        <p className="text-xs text-slate-400 font-bold uppercase mb-1">Asset Value</p>
-                                        <p className="text-xl font-bold text-[#00E5FF]">${assetsValue.toLocaleString()}</p>
+                                        <p className="text-xs text-slate-400 font-bold uppercase mb-1">{t.dashboard.assetValue}</p>
+                                        <p className="text-xl font-bold text-[#00E5FF]">{formatCurrency(assetsValue, lang)}</p>
                                     </div>
                                     <div>
-                                        <p className="text-xs text-slate-400 font-bold uppercase mb-1">Unclaimed Rent</p>
-                                        <p className="text-xl font-bold text-green-400">${pendingRewards.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                                        <p className="text-xs text-slate-400 font-bold uppercase mb-1">{t.dashboard.unclaimedRent}</p>
+                                        <p className="text-xl font-bold text-green-400">{formatCurrency(pendingRewards, lang)}</p>
                                     </div>
                                 </div>
                             </div>
@@ -223,10 +238,10 @@ export default function Dashboard() {
                             <div>
                                 <div className="flex items-center gap-3 mb-4">
                                     <div className="bg-green-100 p-2 rounded-lg text-green-600"><DollarSign size={20} /></div>
-                                    <span className="font-bold text-slate-700">Rewards</span>
+                                    <span className="font-bold text-slate-700">{t.dashboard.rewards}</span>
                                 </div>
-                                <p className="text-3xl font-bold text-green-600 mb-1">${pendingRewards.toFixed(2)}</p>
-                                <p className="text-xs text-slate-400">Accumulated from rentals</p>
+                                <p className="text-3xl font-bold text-green-600 mb-1">{formatCurrency(pendingRewards, lang)}</p>
+                                <p className="text-xs text-slate-400">{t.dashboard.rewardsSubtitle}</p>
                             </div>
                             <button
                                 onClick={() => setClaimModalOpen(true)}
@@ -236,14 +251,14 @@ export default function Dashboard() {
                                         ? "bg-green-500 hover:bg-green-600 text-white shadow-lg shadow-green-200"
                                         : "bg-slate-100 text-slate-400 cursor-not-allowed"}`}
                             >
-                                Claim to Wallet
+                                {t.dashboard.claimToWallet}
                             </button>
                         </div>
                     </div>
 
                     {/* 2. ASSETS LIST */}
                     <h2 className="text-xl font-bold text-[#0F172A] mb-6 flex items-center gap-2">
-                        <PieChart className="text-[#009B9E]" /> Your Assets
+                        <PieChart className="text-[#009B9E]" /> {t.dashboard.assetsTitle}
                     </h2>
 
                     {data?.assets && data.assets.length > 0 ? (
@@ -265,30 +280,38 @@ export default function Dashboard() {
                                         <div>
                                             <div className="flex justify-between items-start mb-4">
                                                 <div className="font-bold text-[#0F172A] text-lg group-hover:text-[#009B9E] transition">{asset.propertyName}</div>
-                                                <div className="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full font-bold">Active</div>
+                                                <div className="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full font-bold">{t.dashboard.active}</div>
                                             </div>
                                             <div className="space-y-3 mb-6">
                                                 <div className="flex justify-between text-sm">
-                                                    <span className="text-slate-400">Tokens Owned</span>
+                                                    <span className="text-slate-400">{t.dashboard.tokensOwned}</span>
                                                     <span
                                                         className="font-bold text-slate-700"
                                                         data-testid={`portfolio-token-amount-${asset.property_id}`}
                                                     >
-                                                        {asset.investedAmount.toFixed(2)}
+                                                        {formatNumber(asset.investedAmount, lang, {
+                                                            minimumFractionDigits: 2,
+                                                            maximumFractionDigits: 2
+                                                        })}
                                                     </span>
                                                 </div>
                                                 <div className="flex justify-between text-sm">
-                                                    <span className="text-slate-400">Current Value</span>
-                                                    <span className="font-bold text-[#0F172A]">${currentValue.toLocaleString()}</span>
+                                                    <span className="text-slate-400">{t.dashboard.currentValue}</span>
+                                                    <span className="font-bold text-[#0F172A]">{formatCurrency(currentValue, lang)}</span>
                                                 </div>
                                                 <div className="flex justify-between text-sm">
-                                                    <span className="text-slate-400">Unclaimed Rent</span>
-                                                    <span className="font-bold text-green-600">+${(asset.unclaimed_rewards || 0).toFixed(4)}</span>
+                                                    <span className="text-slate-400">{t.dashboard.unclaimedRent}</span>
+                                                    <span className="font-bold text-green-600">
+                                                        +{formatCurrency(asset.unclaimed_rewards || 0, lang, 'USD', {
+                                                            minimumFractionDigits: 4,
+                                                            maximumFractionDigits: 4
+                                                        })}
+                                                    </span>
                                                 </div>
                                             </div>
                                         </div>
                                         <button onClick={() => { setSelectedAsset(asset); setSellModalOpen(true); }} className="w-full mt-auto bg-slate-50 hover:bg-slate-100 text-slate-600 font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 text-sm">
-                                            <ArrowDownCircle size={18} /> Sell Tokens
+                                            <ArrowDownCircle size={18} /> {t.dashboard.sellTokens}
                                         </button>
                                     </div>
                                 );
@@ -299,7 +322,7 @@ export default function Dashboard() {
                             className="text-center py-12 bg-white rounded-2xl border border-dashed border-slate-300 mb-12"
                             data-testid="portfolio-empty-state"
                         >
-                            <p className="text-slate-500">No active assets found. Start investing from the Marketplace!</p>
+                            <p className="text-slate-500">{t.dashboard.assetsEmpty}</p>
                         </div>
                     )}
 
@@ -327,27 +350,47 @@ export default function Dashboard() {
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
                     <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative">
                         <button onClick={() => setSellModalOpen(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600"><X size={24} /></button>
-                        <h2 className="text-2xl font-bold text-[#0F172A] mb-1">Sell Tokens</h2>
+                        <h2 className="text-2xl font-bold text-[#0F172A] mb-1">{t.dashboard.sellModalTitle}</h2>
                         <p className="text-slate-500 mb-6">{selectedAsset.propertyName}</p>
 
                         <form onSubmit={handleSell} className="space-y-5">
                             <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                                <div className="flex justify-between text-sm mb-1"><span className="text-slate-500">Available Tokens:</span><span className="font-bold text-slate-800">{selectedAsset.investedAmount}</span></div>
-                                <div className="flex justify-between text-sm"><span className="text-slate-500">Price per Token:</span><span className="font-bold text-[#009B9E]">${getUnitPrice(selectedAsset).toFixed(2)}</span></div>
+                                <div className="flex justify-between text-sm mb-1">
+                                    <span className="text-slate-500">{t.dashboard.availableTokens}</span>
+                                    <span className="font-bold text-slate-800">
+                                        {formatNumber(selectedAsset.investedAmount, lang)}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-slate-500">{t.dashboard.pricePerToken}</span>
+                                    <span className="font-bold text-[#009B9E]">
+                                        {formatCurrency(getUnitPrice(selectedAsset), lang)}
+                                    </span>
+                                </div>
                             </div>
 
                             <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Amount to Sell</label>
-                                <input type="number" step="1" min="1" max={selectedAsset.investedAmount} required className="w-full bg-slate-50 border border-slate-200 rounded-lg p-3 text-lg font-bold outline-none focus:ring-2 focus:ring-[#009B9E]" placeholder="0" value={sellAmount} onChange={e => setSellAmount(e.target.value)} />
+                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{t.dashboard.amountToSell}</label>
+                                <input
+                                    type="number"
+                                    step="1"
+                                    min="1"
+                                    max={selectedAsset.investedAmount}
+                                    required
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-3 text-lg font-bold outline-none focus:ring-2 focus:ring-[#009B9E]"
+                                    placeholder={t.dashboard.sellAmountPlaceholder}
+                                    value={sellAmount}
+                                    onChange={e => setSellAmount(e.target.value)}
+                                />
                             </div>
 
                             <div className="bg-blue-50 p-3 rounded-lg flex gap-3 text-blue-700 text-xs items-start">
                                 <DollarSign size={16} className="shrink-0 mt-0.5" />
-                                <p>Proceeds (minus 1.5% fee) will be added to your <strong>USD Balance</strong> immediately.</p>
+                                <p>{t.dashboard.proceedsNote}</p>
                             </div>
 
                             <button type="submit" disabled={isProcessing} className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2">
-                                {isProcessing ? <Loader2 className="animate-spin" /> : 'Confirm Sale'}
+                                {isProcessing ? <Loader2 className="animate-spin" /> : t.dashboard.confirmSale}
                             </button>
                         </form>
                     </div>
@@ -360,16 +403,16 @@ export default function Dashboard() {
                     <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 relative text-center">
                         <button onClick={() => setClaimModalOpen(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600"><X size={24} /></button>
                         <div className="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-green-600"><DollarSign size={32} /></div>
-                        <h2 className="text-2xl font-bold text-[#0F172A] mb-2">Claim Rewards</h2>
-                        <p className="text-slate-500 mb-6 text-sm">Move your accumulated rent to your wallet.</p>
+                        <h2 className="text-2xl font-bold text-[#0F172A] mb-2">{t.dashboard.claimModalTitle}</h2>
+                        <p className="text-slate-500 mb-6 text-sm">{t.dashboard.claimModalSubtitle}</p>
 
                         <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-6">
-                            <p className="text-slate-500 text-xs font-bold uppercase">Total Amount</p>
-                            <p className="text-3xl font-black text-green-600">${pendingRewards.toFixed(2)}</p>
+                            <p className="text-slate-500 text-xs font-bold uppercase">{t.dashboard.totalAmount}</p>
+                            <p className="text-3xl font-black text-green-600">{formatCurrency(pendingRewards, lang)}</p>
                         </div>
 
                         <button onClick={handleClaim} disabled={isProcessing} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2">
-                            {isProcessing ? <Loader2 className="animate-spin" /> : 'Confirm & Add to Balance'}
+                            {isProcessing ? <Loader2 className="animate-spin" /> : t.dashboard.confirmAddToBalance}
                         </button>
                     </div>
                 </div>
@@ -380,17 +423,17 @@ export default function Dashboard() {
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
                     <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative">
                         <button onClick={() => setWithdrawModalOpen(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600"><X size={24} /></button>
-                        <h2 className="text-2xl font-bold text-[#0F172A] mb-1">Withdraw Funds</h2>
-                        <p className="text-slate-500 mb-6">Transfer USD balance to your Bitcoin wallet.</p>
+                        <h2 className="text-2xl font-bold text-[#0F172A] mb-1">{t.dashboard.withdrawModalTitle}</h2>
+                        <p className="text-slate-500 mb-6">{t.dashboard.withdrawModalSubtitle}</p>
 
                         <form onSubmit={handleWithdraw} className="space-y-5">
                             <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex justify-between items-center">
-                                <span className="text-slate-500 text-sm font-bold">Available Cash:</span>
-                                <span className="font-bold text-[#0F172A]">${cashBalance.toFixed(2)}</span>
+                                <span className="text-slate-500 text-sm font-bold">{t.dashboard.availableCash}</span>
+                                <span className="font-bold text-[#0F172A]">{formatCurrency(cashBalance, lang)}</span>
                             </div>
 
                             <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Amount to Withdraw (USD)</label>
+                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{t.dashboard.amountToWithdrawLabel}</label>
                                 <div className="relative">
                                     <input
                                         type="number"
@@ -399,12 +442,12 @@ export default function Dashboard() {
                                         max={cashBalance}
                                         required
                                         className={`w-full bg-white border rounded-xl p-3 text-lg font-bold outline-none focus:ring-2 transition ${!isBalanceSufficient && wAmount > 0 ? 'border-red-300 focus:ring-red-200 text-red-600' : 'border-slate-200 focus:ring-[#009B9E] text-slate-900'}`}
-                                        placeholder="Min $50"
+                                        placeholder={t.dashboard.amountToWithdrawPlaceholder}
                                         value={withdrawAmount}
                                         onChange={e => setWithdrawAmount(e.target.value)}
                                     />
                                     {!isBalanceSufficient && wAmount > 0 && (
-                                        <p className="text-red-500 text-xs mt-1 font-bold">Insufficient funds</p>
+                                        <p className="text-red-500 text-xs mt-1 font-bold">{t.dashboard.insufficientFunds}</p>
                                     )}
                                 </div>
                             </div>
@@ -413,30 +456,32 @@ export default function Dashboard() {
                             {wAmount > 0 && (
                                 <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 space-y-2">
                                     <div className="flex justify-between text-sm text-slate-500">
-                                        <span>Withdrawal Amount:</span>
-                                        <span>${wAmount.toFixed(2)}</span>
+                                        <span>{t.dashboard.withdrawalAmountLabel}</span>
+                                        <span>{formatCurrency(wAmount, lang)}</span>
                                     </div>
                                     <div className="flex justify-between text-sm text-red-500">
-                                        <span>Processing Fee ($5 + 1%):</span>
-                                        <span>-${wFee.toFixed(2)}</span>
+                                        <span>{t.dashboard.processingFeeLabel}</span>
+                                        <span>-{formatCurrency(wFee, lang)}</span>
                                     </div>
                                     <div className="border-t border-slate-200 pt-2 flex justify-between font-bold text-[#0F172A]">
-                                        <span>You will receive:</span>
-                                        <span className="flex items-center gap-1"><Calculator size={14} /> ${wNet.toFixed(2)}</span>
+                                        <span>{t.dashboard.youWillReceive}</span>
+                                        <span className="flex items-center gap-1">
+                                            <Calculator size={14} /> {formatCurrency(wNet, lang)}
+                                        </span>
                                     </div>
                                 </div>
                             )}
 
                             <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Destination BTC Address</label>
+                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{t.dashboard.destinationBtcAddress}</label>
                                 <div className="relative">
                                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400"><Wallet size={16} /></div>
-                                    <input type="text" required className="w-full pl-9 bg-slate-50 border border-slate-200 rounded-lg p-3 text-sm font-mono outline-none focus:ring-2 focus:ring-[#009B9E]" placeholder="bc1q..." value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
+                                    <input type="text" required className="w-full pl-9 bg-slate-50 border border-slate-200 rounded-lg p-3 text-sm font-mono outline-none focus:ring-2 focus:ring-[#009B9E]" placeholder={t.dashboard.btcPlaceholder} value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
                                 </div>
                             </div>
 
                             <button type="submit" disabled={isProcessing || !isBalanceSufficient} className="w-full bg-[#0F172A] hover:bg-slate-800 text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
-                                {isProcessing ? <Loader2 className="animate-spin" /> : 'Request Withdrawal'}
+                                {isProcessing ? <Loader2 className="animate-spin" /> : t.dashboard.requestWithdrawal}
                             </button>
                         </form>
                     </div>

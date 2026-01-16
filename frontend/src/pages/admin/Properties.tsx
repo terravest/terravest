@@ -5,6 +5,7 @@ import {
     Plus, Edit2, Trash2, X, Star, Upload, Loader2, Image as ImageIcon,
     ArrowUp, ArrowDown, CheckCircle
 } from 'lucide-react';
+import { formatCurrency, formatNumber, formatPercent } from '../../utils/format';
 
 interface PropertyImage {
     url: string;
@@ -27,6 +28,7 @@ interface Property {
 }
 
 export default function Properties() {
+    const lang = 'en' as const;
     const [properties, setProperties] = useState<Property[]>([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -287,17 +289,27 @@ export default function Properties() {
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     <span className="font-bold text-[#0F172A]">
-                                                        ${property.price_usd?.toLocaleString() || '0'}
+                                                        {formatCurrency(property.price_usd || 0, lang)}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     <span className="text-slate-700">
-                                                        {property.available_tokens || 0} / {property.total_tokens || 0}
+                                                        {formatNumber(property.available_tokens || 0, lang)} / {formatNumber(property.total_tokens || 0, lang)}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     <span className="text-green-600 font-bold">
-                                                        {property.rental_yield || 'N/A'}
+                                                        {property.rental_yield !== null && property.rental_yield !== undefined
+                                                            ? (() => {
+                                                                if (typeof property.rental_yield === 'number') {
+                                                                    const normalized = property.rental_yield > 1 ? property.rental_yield / 100 : property.rental_yield;
+                                                                    return formatPercent(normalized, lang);
+                                                                }
+                                                                const parsed = parseFloat(property.rental_yield);
+                                                                if (Number.isNaN(parsed)) return property.rental_yield;
+                                                                return formatPercent(parsed / 100, lang);
+                                                            })()
+                                                            : 'N/A'}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4">

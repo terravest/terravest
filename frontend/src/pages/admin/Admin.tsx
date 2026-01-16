@@ -5,8 +5,10 @@ import {
     CheckCircle, Clock, Loader2,
     X, Trash2, Plus, Building2, LayoutList, ArrowDownCircle, History
 } from 'lucide-react';
+import { formatCurrency, formatNumber, formatDate } from '../../utils/format';
 
 export default function Admin() {
+    const lang = 'en' as const;
     // TABS
     const [activeTab, setActiveTab] = useState<'orders' | 'properties' | 'withdrawals'>('orders');
 
@@ -150,7 +152,9 @@ export default function Admin() {
                                             <tr key={order.id} className="hover:bg-green-50/20">
                                                 <td className="px-6 py-4">{order.email}</td>
                                                 <td className="px-6 py-4">{order.property_title}</td>
-                                                <td className="px-6 py-4 text-green-600 font-bold">${order.total_price_usd}</td>
+                                                <td className="px-6 py-4 text-green-600 font-bold">
+                                                    {formatCurrency(order.total_price_usd, lang)}
+                                                </td>
                                                 <td className="px-6 py-4">
                                                     <button onClick={() => { setSelectedItem(order); setModalType('buy'); setApproveModalOpen(true); }} className="bg-[#009B9E] text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1">
                                                         <CheckCircle size={14} /> Approve
@@ -176,10 +180,12 @@ export default function Admin() {
                                     <tbody className="divide-y divide-slate-100">
                                         {historyOrders.map(order => (
                                             <tr key={order.id} className="hover:bg-slate-50">
-                                                <td className="px-6 py-4 text-slate-500">{new Date(order.created_at).toLocaleDateString()}</td>
+                                                <td className="px-6 py-4 text-slate-500">{formatDate(order.created_at, lang)}</td>
                                                 <td className="px-6 py-4">{order.email}</td>
                                                 <td className="px-6 py-4">{order.property_title}</td>
-                                                <td className="px-6 py-4 font-bold">${order.total_price_usd}</td>
+                                                <td className="px-6 py-4 font-bold">
+                                                    {formatCurrency(order.total_price_usd, lang)}
+                                                </td>
                                                 <td className="px-6 py-4"><span className="bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-bold">Completed</span></td>
                                             </tr>
                                         ))}
@@ -206,7 +212,9 @@ export default function Admin() {
                                         {pendingWithdrawals.map(req => (
                                             <tr key={req.id} className="hover:bg-red-50/20">
                                                 <td className="px-6 py-4 font-medium">{req.email}</td>
-                                                <td className="px-6 py-4 text-red-600 font-bold">${req.total_value_usd.toFixed(2)}</td>
+                                                <td className="px-6 py-4 text-red-600 font-bold">
+                                                    {formatCurrency(req.total_value_usd, lang)}
+                                                </td>
                                                 <td className="px-6 py-4">{req.token_amount.toFixed(2)} {req.property_title}</td>
                                                 <td className="px-6 py-4 text-xs font-mono text-slate-500 max-w-[200px] truncate" title={req.payment_details}>
                                                     {req.payment_details}
@@ -236,9 +244,11 @@ export default function Admin() {
                                     <tbody className="divide-y divide-slate-100">
                                         {completedWithdrawals.map(req => (
                                             <tr key={req.id}>
-                                                <td className="px-6 py-4 text-slate-500">{new Date(req.created_at).toLocaleDateString()}</td>
+                                                <td className="px-6 py-4 text-slate-500">{formatDate(req.created_at, lang)}</td>
                                                 <td className="px-6 py-4">{req.email}</td>
-                                                <td className="px-6 py-4 font-bold text-red-400">-${req.total_value_usd.toFixed(2)}</td>
+                                                <td className="px-6 py-4 font-bold text-red-400">
+                                                    -{formatCurrency(req.total_value_usd, lang)}
+                                                </td>
                                                 <td className="px-6 py-4"><span className="bg-slate-100 text-slate-500 px-2 py-1 rounded text-xs font-bold">Paid</span></td>
                                             </tr>
                                         ))}
@@ -298,9 +308,13 @@ export default function Admin() {
                                         <div className="h-12 w-12 bg-slate-100 rounded-lg overflow-hidden shrink-0"><img src={prop.image_url || `https://images.unsplash.com/photo-1560184897-ae75f418493e?ixlib=rb-1.2.1&auto=format&fit=crop&w=100&q=80&sig=${prop.id}`} className="w-full h-full object-cover opacity-80" alt={prop.title} /></div>
                                         <div>
                                             <h3 className="font-bold text-[#0F172A]">{prop.title}</h3>
-                                            <div className="text-xs text-slate-500">${prop.price_usd?.toLocaleString()} • {prop.available_tokens} left</div>
+                                            <div className="text-xs text-slate-500">
+                                                {formatCurrency(prop.price_usd || 0, lang)} • {formatNumber(prop.available_tokens || 0, lang)} left
+                                            </div>
                                             {/* Kira Getirisi Göstergesi */}
-                                            <div className="text-xs text-green-600 font-bold mt-1">Rent Yield: ${prop.monthly_yield}/mo</div>
+                                            <div className="text-xs text-green-600 font-bold mt-1">
+                                                Rent Yield: {formatCurrency(prop.monthly_yield || 0, lang)}/mo
+                                            </div>
                                         </div>
                                     </div>
                                     <button onClick={() => handleDeleteProperty(prop.id)} className="text-slate-400 hover:text-red-500 p-2"><Trash2 size={18} /></button>

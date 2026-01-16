@@ -1,5 +1,8 @@
 import { Link } from 'react-router-dom';
 import { MapPin, ArrowRight } from 'lucide-react';
+import { useContext } from 'react';
+import { LanguageContext } from '../App';
+import { formatCurrency, formatNumber } from '../utils/format';
 
 interface Property {
     id: number;
@@ -14,6 +17,13 @@ interface Property {
 }
 
 export default function PropertyCard({ property }: { property: Property }) {
+    const lang = useContext(LanguageContext);
+
+    const getLink = (path: string) => {
+        const normalized = path.startsWith('/') ? path : `/${path}`;
+        if (lang === 'en') return normalized;
+        return normalized === '/' ? `/${lang}` : `/${lang}${normalized}`;
+    };
     // Image Selection: Backend URL > Array First Element > Placeholder
     const displayImage = property.image_url || property.images?.[0]?.url || "https://placehold.co/600x400?text=No+Image";
 
@@ -22,7 +32,7 @@ export default function PropertyCard({ property }: { property: Property }) {
     const progressPercent = Math.min(100, Math.max(0, (soldTokens / property.total_tokens) * 100));
 
     return (
-        <Link to={`/properties/${property.id}`} className="block group h-full">
+        <Link to={getLink(`/properties/${property.id}`)} className="block group h-full">
             <div className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 hover:shadow-xl transition-all duration-300 h-full flex flex-col">
                 
                 {/* Image Area */}
@@ -55,15 +65,15 @@ export default function PropertyCard({ property }: { property: Property }) {
                         </div>
                         
                         <div className="flex justify-between text-xs font-medium text-slate-500">
-                            <span>{soldTokens} Sold</span>
-                            <span>{property.total_tokens} Total</span>
+                            <span>{formatNumber(soldTokens, lang)} Sold</span>
+                            <span>{formatNumber(property.total_tokens, lang)} Total</span>
                         </div>
                         
                         <div className="pt-3 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between">
                             <div>
                                 <p className="text-xs text-slate-400 font-bold uppercase">Token Price</p>
                                 <p className="text-lg font-bold text-[#009B9E]">
-                                    ${(property.price_usd / property.total_tokens).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                                    {formatCurrency(property.price_usd / property.total_tokens, lang)}
                                 </p>
                             </div>
                             <div className="bg-slate-50 dark:bg-slate-700/50 p-2 rounded-full text-slate-400 group-hover:bg-[#009B9E] group-hover:text-white transition-all">

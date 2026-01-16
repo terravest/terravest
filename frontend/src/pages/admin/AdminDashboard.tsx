@@ -6,6 +6,7 @@ import {
 import toast from 'react-hot-toast';
 import { api } from '../../lib/api';
 import AdminNavbar from '../../components/AdminNavbar';
+import { formatCurrency, formatDate } from '../../utils/format';
 
 // --- TİP TANIMLARI ---
 interface Deposit {
@@ -32,6 +33,7 @@ interface Withdrawal {
 }
 
 export default function AdminDashboard() {
+    const lang = 'en' as const;
     // --- STATE ---
     const [deposits, setDeposits] = useState<Deposit[]>([]);
     const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
@@ -162,9 +164,11 @@ export default function AdminDashboard() {
                                     ) : (
                                         deposits.slice(0, 10).map((deposit) => (
                                             <tr key={deposit.id} className="hover:bg-slate-50 transition">
-                                                <td className="px-6 py-4 text-slate-500">{new Date(deposit.created_at).toLocaleDateString()}</td>
+                                                <td className="px-6 py-4 text-slate-500">{formatDate(deposit.created_at, lang)}</td>
                                                 <td className="px-6 py-4 font-medium">{deposit.username || 'Unknown'}</td>
-                                                <td className="px-6 py-4 font-bold text-green-600">+${deposit.amount_usd.toLocaleString()}</td>
+                                                <td className="px-6 py-4 font-bold text-green-600">
+                                                    +{formatCurrency(deposit.amount_usd, lang)}
+                                                </td>
                                                 <td className="px-6 py-4 font-mono text-xs text-slate-400 truncate max-w-[100px]">{deposit.address}</td>
                                                 <td className="px-6 py-4">
                                                     {deposit.status === 'completed' ?
@@ -212,9 +216,11 @@ export default function AdminDashboard() {
                                     ) : (
                                         withdrawals.slice(0, 10).map((w) => (
                                             <tr key={w.id} className="hover:bg-slate-50 transition">
-                                                <td className="px-6 py-4 text-slate-500">{new Date(w.created_at).toLocaleDateString()}</td>
+                                                <td className="px-6 py-4 text-slate-500">{formatDate(w.created_at, lang)}</td>
                                                 <td className="px-6 py-4 font-medium">{w.username || 'Unknown'}</td>
-                                                <td className="px-6 py-4 font-bold text-red-600">-${w.amount.toLocaleString()}</td>
+                                                <td className="px-6 py-4 font-bold text-red-600">
+                                                    -{formatCurrency(w.amount, lang)}
+                                                </td>
                                                 <td className="px-6 py-4">
                                                     <div className="flex items-center gap-2">
                                                         <code className="bg-slate-100 px-2 py-1 rounded text-xs text-slate-600 truncate max-w-[120px]" title={w.address}>{w.address}</code>
@@ -254,7 +260,10 @@ export default function AdminDashboard() {
                             <div className="text-center mb-6">
                                 <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4 text-blue-600"><AlertCircle size={32} /></div>
                                 <h2 className="text-xl font-bold text-slate-900">Approve Deposit?</h2>
-                                <p className="text-slate-500 mt-2 text-sm">Add <strong className="text-slate-900">${selectedDeposit.amount_usd}</strong> to <strong className="text-slate-900">{selectedDeposit.username}</strong>?</p>
+                                <p className="text-slate-500 mt-2 text-sm">
+                                    Add <strong className="text-slate-900">{formatCurrency(selectedDeposit.amount_usd, lang)}</strong> to{' '}
+                                    <strong className="text-slate-900">{selectedDeposit.username}</strong>?
+                                </p>
                             </div>
                             <div className="flex gap-3">
                                 <button onClick={() => setSelectedDeposit(null)} className="flex-1 py-3 border border-slate-200 rounded-xl font-bold text-slate-600 hover:bg-slate-50">Cancel</button>
@@ -276,7 +285,10 @@ export default function AdminDashboard() {
                             <p className="text-slate-500 text-sm mb-6">Enter the Transaction ID (Hash) to complete this request.</p>
 
                             <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-6 space-y-2">
-                                <div className="flex justify-between text-sm"><span className="text-slate-500">Amount:</span> <span className="font-bold text-red-600">-${selectedWithdrawal.amount}</span></div>
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-slate-500">Amount:</span>
+                                    <span className="font-bold text-red-600">-{formatCurrency(selectedWithdrawal.amount, lang)}</span>
+                                </div>
                                 <div className="flex justify-between text-sm"><span className="text-slate-500">To:</span> <span className="font-mono text-slate-700 truncate max-w-[200px]">{selectedWithdrawal.address}</span></div>
                             </div>
 

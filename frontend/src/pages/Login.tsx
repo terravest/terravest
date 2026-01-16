@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { User, Lock, ArrowRight, Loader2 } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../lib/api';
@@ -6,11 +6,21 @@ import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
 import toast from 'react-hot-toast';
 import { Turnstile } from '@marsidev/react-turnstile'; // 1. Turnstile import edildi
+import { LanguageContext } from '../App';
+import { content } from '../content';
 
 export default function Login() {
     const navigate = useNavigate();
     // login function now takes 3rd parameter (rememberMe)
     const { login, user } = useAuth();
+    const lang = useContext(LanguageContext);
+    const t = content[lang];
+
+    const getLink = (path: string) => {
+        const normalized = path.startsWith('/') ? path : `/${path}`;
+        if (lang === 'en') return normalized;
+        return normalized === '/' ? `/${lang}` : `/${lang}${normalized}`;
+    };
 
     const [isLoading, setIsLoading] = useState(false);
     const [identifier, setIdentifier] = useState('');
@@ -21,24 +31,24 @@ export default function Login() {
     const [turnstileToken, setTurnstileToken] = useState<string>("");
     const [rememberMe, setRememberMe] = useState(false);
 
-    // ✅ 1. SESSION CHECK
+    // Session check
     useEffect(() => {
         if (user) {
             if (user.role === 'admin') {
-                navigate('/admin/dashboard', { replace: true });
+                navigate(getLink('/admin/dashboard'), { replace: true });
             } else {
-                navigate('/', { replace: true });
+                navigate(getLink('/'), { replace: true });
             }
         }
-    }, [user, navigate]);
+    }, [user, navigate, lang]);
 
-    // ✅ 2. LOGIN HANDLER
+    // Login handler
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
         // Bot check (Don't proceed if token is missing)
         if (!turnstileToken) {
-            toast.error("Please confirm you are not a robot🤖");
+            toast.error(t.auth.loginBotError);
             return;
         }
 
@@ -55,7 +65,7 @@ export default function Login() {
                 password,
                 turnstileToken,
                 rememberMe
-            } as any); // "as any" geçici çözüm, api.ts güncellenmeli
+            } as any); // "as any" gecici cozum, api.ts guncellenmeli
 
             if (response.token) {
                 const userData = response.user || { email: '', id: 0, role: 'user', username: '' };
@@ -63,17 +73,17 @@ export default function Login() {
                 // Inform AuthContext about "Remember Me" preference
                 login(response.token, userData, rememberMe);
 
-                toast.success("Welcome back! 👋");
+                toast.success(t.auth.loginWelcome);
 
                 if (userData.role === 'admin') {
-                    navigate('/admin/dashboard');
+                    navigate(getLink('/admin/dashboard'));
                 } else {
-                    navigate('/');
+                    navigate(getLink('/'));
                 }
             }
         } catch (error: any) {
             console.error("Login Error:", error);
-            let errorMessage = "Unsuccessful Login";
+            let errorMessage = t.auth.loginFailed;
 
             if (typeof error === 'string') {
                 errorMessage = error;
@@ -109,8 +119,11 @@ export default function Login() {
                 <div className="w-full max-w-md p-8 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl shadow-2xl animate-fade-in-up">
 
                     <div className="text-center mb-8">
-                        <h1 className="text-4xl font-bold text-white tracking-tight mb-2">Terra<span className="text-[#00E5FF]">Vest</span></h1>
-                        <p className="text-gray-100">Login to access your portfolio</p>
+                        <h1 className="text-4xl font-bold text-white tracking-tight mb-2">
+                            {t.auth.loginTitlePrefix}
+                            <span className="text-[#00E5FF]">{t.auth.loginTitleBrand}</span>
+                        </h1>
+                        <p className="text-gray-100">{t.auth.loginSubtitle}</p>
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-6">
@@ -118,7 +131,7 @@ export default function Login() {
                             <User className="absolute left-3 top-3.5 h-5 w-5 text-gray-300" />
                             <input
                                 type="text"
-                                placeholder="Email or Username"
+                                placeholder={t.auth.loginIdentifierPlaceholder}
                                 className="w-full bg-black/20 border border-white/10 rounded-lg py-3 pl-10 pr-4 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-[#00E5FF] focus:border-transparent transition-all"
                                 value={identifier}
                                 onChange={(e) => {
@@ -134,7 +147,7 @@ export default function Login() {
                             <Lock className="absolute left-3 top-3.5 h-5 w-5 text-gray-300" />
                             <input
                                 type="password"
-                                placeholder="Password"
+                                placeholder={t.auth.loginPasswordPlaceholder}
                                 className="w-full bg-black/20 border border-white/10 rounded-lg py-3 pl-10 pr-4 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-[#00E5FF] focus:border-transparent transition-all"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
@@ -151,9 +164,9 @@ export default function Login() {
                                     checked={rememberMe}
                                     onChange={(e) => setRememberMe(e.target.checked)}
                                 />
-                                Remember Me
+                                {t.auth.rememberMe}
                             </label>
-                            <Link to="#" className="text-[#00E5FF] hover:text-white transition-colors">Forgot Password</Link>
+                            <Link to="#" className="text-[#00E5FF] hover:text-white transition-colors">{t.auth.forgotPassword}</Link>
                         </div>
 
                         {/* Cloudflare Turnstile Widget */}
@@ -161,7 +174,7 @@ export default function Login() {
                             <Turnstile
                                 siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || "YOUR_SITE_KEY_HERE"}
                                 onSuccess={(token) => setTurnstileToken(token)}
-                                onError={() => toast.error("Security verification failed to load.")}
+                                onError={() => toast.error(t.auth.loginSecurityError)}
                                 options={{
                                     theme: 'light',
                                     size: 'normal', // veya 'compact'
@@ -175,14 +188,14 @@ export default function Login() {
                             disabled={isLoading || !turnstileToken}
                             className="w-full bg-[#FF6B6B] hover:bg-[#E85555] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3 rounded-lg shadow-lg transform transition hover:scale-[1.02] flex items-center justify-center gap-2"
                         >
-                            {isLoading ? (<Loader2 className="animate-spin h-5 w-5" />) : (<>Login <ArrowRight className="h-5 w-5" /></>)}
+                            {isLoading ? (<Loader2 className="animate-spin h-5 w-5" />) : (<>{t.auth.loginButton} <ArrowRight className="h-5 w-5" /></>)}
                         </button>
                     </form>
 
                     <div className="mt-6 text-center">
                         <p className="text-gray-200 text-sm">
-                            Don't have an account?
-                            <Link to="/register" className="text-[#00E5FF] hover:text-white font-semibold ml-2 transition-colors inline-block">Register</Link>
+                            {t.auth.loginNoAccount}
+                            <Link to={getLink('/register')} className="text-[#00E5FF] hover:text-white font-semibold ml-2 transition-colors inline-block">{t.auth.loginRegisterLink}</Link>
                         </p>
                     </div>
                 </div>

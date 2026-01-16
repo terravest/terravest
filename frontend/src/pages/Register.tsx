@@ -3,14 +3,14 @@ import { Mail, Lock, Loader2, Check, X, CheckCircle, User } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import Navbar from '../components/Navbar';
-import { useAuth } from '../context/AuthContext'; // Added useAuth
+import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import { LanguageContext } from '../App';
 import { content } from '../content';
 
 export default function Register() {
     const navigate = useNavigate();
-    const { login } = useAuth(); // Get login function from context
+    const { login } = useAuth();
     const lang = useContext(LanguageContext);
     const t = content[lang];
 
@@ -64,7 +64,8 @@ export default function Register() {
         }
 
         try {
-            const response = await api.register({ email, username, password });
+            // DÜZELTME BURADA: (await ...) as any diyerek TypeScript hatasını çözüyoruz
+            const response = (await api.register({ email, username, password })) as any;
 
             if (response.token && response.user) {
                 login(response.token, response.user, false);
@@ -77,7 +78,6 @@ export default function Register() {
 
         } catch (error: any) {
             console.error("Registration Error:", error);
-
             let errorMessage = "Registration failed. Please try again.";
 
             if (error.error) {
@@ -87,7 +87,6 @@ export default function Register() {
             } else if (typeof error === "string") {
                 errorMessage = error;
             }
-
             toast.error(errorMessage);
         } finally {
             setIsLoading(false);
@@ -106,6 +105,13 @@ export default function Register() {
                 <div className="w-full max-w-md p-8 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl shadow-2xl">
 
                     <div className="text-center mb-6">
+                        {/* LOGO EKLENDİ */}
+                        <img
+                            src="/logo.svg"
+                            alt="TerraVest"
+                            className="h-16 w-auto mx-auto mb-6 drop-shadow-lg"
+                        />
+
                         <h1 className="text-4xl font-bold text-white tracking-tight mb-2">{t.auth.registerTitlePrefix} <span className="text-[#00E5FF]">{t.auth.registerTitleBrand}</span></h1>
                         <p className="text-gray-100 mb-3">{t.auth.registerSubtitle}</p>
                         <div className="text-xs text-gray-200 space-y-1">

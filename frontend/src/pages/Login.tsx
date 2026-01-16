@@ -5,13 +5,12 @@ import { api } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
 import toast from 'react-hot-toast';
-import { Turnstile } from '@marsidev/react-turnstile'; // 1. Turnstile import edildi
+import { Turnstile } from '@marsidev/react-turnstile';
 import { LanguageContext } from '../App';
 import { content } from '../content';
 
 export default function Login() {
     const navigate = useNavigate();
-    // login function now takes 3rd parameter (rememberMe)
     const { login, user } = useAuth();
     const lang = useContext(LanguageContext);
     const t = content[lang];
@@ -26,12 +25,9 @@ export default function Login() {
     const [identifier, setIdentifier] = useState('');
     const [identifierType, setIdentifierType] = useState<'email' | 'username'>('email');
     const [password, setPassword] = useState('');
-
-    // 2. New States
     const [turnstileToken, setTurnstileToken] = useState<string>("");
     const [rememberMe, setRememberMe] = useState(false);
 
-    // Session check
     useEffect(() => {
         if (user) {
             if (user.role === 'admin') {
@@ -42,11 +38,9 @@ export default function Login() {
         }
     }, [user, navigate, lang]);
 
-    // Login handler
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        // Bot check (Don't proceed if token is missing)
         if (!turnstileToken) {
             toast.error(t.auth.loginBotError);
             return;
@@ -56,23 +50,18 @@ export default function Login() {
         toast.dismiss();
 
         try {
-            // Send token and rememberMe info to API
-            // Note: If api.login function type definition isn't updated, TS may warn,
-            // but it works on JS side. It's good to update api.ts.
-            const response = await api.login({
+            // DÜZELTME BURADA: (await ...) as any diyerek TypeScript hatasını çözüyoruz
+            const response = (await api.login({
                 identifier,
                 identifierType,
                 password,
                 turnstileToken,
                 rememberMe
-            } as any); // "as any" gecici cozum, api.ts guncellenmeli
+            })) as any;
 
             if (response.token) {
                 const userData = response.user || { email: '', id: 0, role: 'user', username: '' };
-
-                // Inform AuthContext about "Remember Me" preference
                 login(response.token, userData, rememberMe);
-
                 toast.success(t.auth.loginWelcome);
 
                 if (userData.role === 'admin') {
@@ -93,12 +82,7 @@ export default function Login() {
                 errorMessage = error.message;
             }
             toast.error(errorMessage);
-
-            // Reset Turnstile on error
             setTurnstileToken('');
-
-            // Resetting Turnstile on error may be a good practice
-            // (Manual reset may be needed if library doesn't do it automatically)
         } finally {
             setIsLoading(false);
         }
@@ -106,19 +90,23 @@ export default function Login() {
 
     return (
         <div className="min-h-screen relative overflow-hidden bg-[#F9F7F3]">
-            {/* Navbar */}
             <div className="relative z-20"><Navbar /></div>
 
-            {/* Background Image & Overlay */}
             <div className="absolute inset-0 z-0" style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1535498730771-e735b998cd64?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80")', backgroundSize: 'cover', backgroundPosition: 'center', }}>
                 <div className="absolute inset-0 bg-[#009B9E]/80 mix-blend-multiply"></div>
             </div>
 
-            {/* Form Container */}
             <div className="relative z-10 flex items-center justify-center min-h-[calc(100vh-80px)] px-4">
                 <div className="w-full max-w-md p-8 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl shadow-2xl animate-fade-in-up">
 
                     <div className="text-center mb-8">
+                        {/* LOGO EKLENDİ */}
+                        <img
+                            src="/logo.svg"
+                            alt="TerraVest"
+                            className="h-16 w-auto mx-auto mb-6 drop-shadow-lg"
+                        />
+
                         <h1 className="text-4xl font-bold text-white tracking-tight mb-2">
                             {t.auth.loginTitlePrefix}
                             <span className="text-[#00E5FF]">{t.auth.loginTitleBrand}</span>
@@ -135,10 +123,10 @@ export default function Login() {
                                 className="w-full bg-black/20 border border-white/10 rounded-lg py-3 pl-10 pr-4 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-[#00E5FF] focus:border-transparent transition-all"
                                 value={identifier}
                                 onChange={(e) => {
-                                const value = e.target.value;
-                                setIdentifier(value);
-                                setIdentifierType(value.includes('@') ? 'email' : 'username');
-                            }}
+                                    const value = e.target.value;
+                                    setIdentifier(value);
+                                    setIdentifierType(value.includes('@') ? 'email' : 'username');
+                                }}
                                 required
                             />
                         </div>
@@ -155,7 +143,6 @@ export default function Login() {
                             />
                         </div>
 
-                        {/* Remember Me Checkbox */}
                         <div className="flex items-center justify-between text-sm">
                             <label className="flex items-center text-gray-200 cursor-pointer hover:text-white transition-colors">
                                 <input
@@ -169,7 +156,6 @@ export default function Login() {
                             <Link to="#" className="text-[#00E5FF] hover:text-white transition-colors">{t.auth.forgotPassword}</Link>
                         </div>
 
-                        {/* Cloudflare Turnstile Widget */}
                         <div className="flex justify-center min-h-[65px]">
                             <Turnstile
                                 siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || "YOUR_SITE_KEY_HERE"}
@@ -177,14 +163,13 @@ export default function Login() {
                                 onError={() => toast.error(t.auth.loginSecurityError)}
                                 options={{
                                     theme: 'light',
-                                    size: 'normal', // veya 'compact'
+                                    size: 'normal',
                                 }}
                             />
                         </div>
 
                         <button
                             type="submit"
-                            // Disable button if token is missing (Force user)
                             disabled={isLoading || !turnstileToken}
                             className="w-full bg-[#FF6B6B] hover:bg-[#E85555] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3 rounded-lg shadow-lg transform transition hover:scale-[1.02] flex items-center justify-center gap-2"
                         >

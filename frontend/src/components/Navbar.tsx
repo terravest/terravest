@@ -94,8 +94,15 @@ export default function Navbar() {
 
                     {/* LOGO */}
                     <Link to={getLink('/')} className="text-2xl font-black tracking-tight flex items-center gap-2 group shrink-0">
-                        <div className="bg-[#009B9E] text-white p-1 rounded-lg group-hover:scale-110 transition">TV</div>
-                        <span>Terra<span className="text-[#009B9E]">Vest</span></span>
+                        <Link to={getLink('/')} className="text-2xl font-black tracking-tight flex items-center gap-2 group shrink-0">
+                            <img
+                                src="/logo.svg"
+                                alt="TerraVest Logo"
+                                className="h-10 w-auto group-hover:scale-105 transition-transform duration-200"
+                            />
+
+
+                        </Link>                        <span>Terra<span className="text-[#009B9E]">Vest</span></span>
                     </Link>
 
                     {/* DESKTOP MENU */}

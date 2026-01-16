@@ -63,6 +63,28 @@ type Content = {
     heroCtaPrimary: string;
     heroCtaSecondary: string;
     heroBackgroundAlt: string;
+    // --- YENİ EKLENEN KISIMLAR (Home.tsx için gerekli) ---
+    stats: {
+      value: string;
+      investors: string;
+      yield: string;
+      onChain: string;
+    };
+    features: {
+      mainTitle: string;
+      mainSubtitle: string;
+      rentTitle: string;
+      rentDesc: string;
+      legalTitle: string;
+      legalDesc: string;
+      liquidityTitle: string;
+      liquidityDesc: string;
+    };
+    finalCta: {
+      title: string;
+      subtitle: string;
+      button: string;
+    };
   };
   landing: {
     heroImageAlt: string;
@@ -404,6 +426,28 @@ export const content: Record<LangType, Content> = {
       heroCtaPrimary: 'View Properties',
       heroCtaSecondary: 'Create Account',
       heroBackgroundAlt: 'City skyline background',
+      // --- ENGLISH HOME DETAILS ---
+      stats: {
+        value: "Property Value",
+        investors: "Investors",
+        yield: "Avg. Yield",
+        onChain: "On-Chain"
+      },
+      features: {
+        mainTitle: "Why TerraVest?",
+        mainSubtitle: "We've removed the barriers to entry. No banks, no paperwork, no hidden fees. Just pure ownership.",
+        rentTitle: "Monthly Rent Visibility",
+        rentDesc: "Rental income accrues daily based on your tokens and becomes visible in your dashboard at the beginning of each month.",
+        legalTitle: "U.S. Legal Structure",
+        legalDesc: "Each property is held by a dedicated U.S. LLC. Tokens represent indirect ownership rights, protected by U.S. property law.",
+        liquidityTitle: "Secondary Market Liquidity",
+        liquidityDesc: "Tokens can be sold on supported secondary markets, giving you flexibility without waiting months for a property sale."
+      },
+      finalCta: {
+        title: "Ready to build your portfolio?",
+        subtitle: "Start earning daily rental income with monthly clarity.",
+        button: "Start Investing Now"
+      }
     },
     landing: {
       heroImageAlt: 'Miami real estate skyline',
@@ -855,6 +899,28 @@ export const content: Record<LangType, Content> = {
       heroCtaPrimary: 'Ver Imóveis',
       heroCtaSecondary: 'Criar Conta',
       heroBackgroundAlt: 'Fundo com skyline da cidade',
+      // --- PT-BR HOME DETAILS ---
+      stats: {
+        value: "Valor Patrimonial",
+        investors: "Investidores",
+        yield: "Rendimento Médio",
+        onChain: "On-Chain"
+      },
+      features: {
+        mainTitle: "Por que TerraVest?",
+        mainSubtitle: "Removemos as barreiras de entrada. Sem bancos, sem papelada, sem taxas ocultas. Apenas propriedade pura.",
+        rentTitle: "Visibilidade Mensal do Aluguel",
+        rentDesc: "A renda de aluguel acumula diariamente com base em seus tokens e fica visível no seu painel no início de cada mês.",
+        legalTitle: "Estrutura Legal nos EUA",
+        legalDesc: "Cada propriedade é detida por uma LLC dedicada nos EUA. Os tokens representam direitos indiretos de propriedade, protegidos pela lei americana.",
+        liquidityTitle: "Liquidez no Mercado Secundário",
+        liquidityDesc: "Os tokens podem ser vendidos em mercados secundários suportados, oferecendo flexibilidade sem esperar meses pela venda do imóvel."
+      },
+      finalCta: {
+        title: "Pronto para construir seu portfólio?",
+        subtitle: "Comece a ganhar renda de aluguel diária com clareza mensal.",
+        button: "Comece a Investir Agora"
+      }
     },
     landing: {
       heroImageAlt: 'Skyline imobiliário de Miami',
@@ -1306,6 +1372,28 @@ export const content: Record<LangType, Content> = {
       heroCtaPrimary: 'Ver Propiedades',
       heroCtaSecondary: 'Crear Cuenta',
       heroBackgroundAlt: 'Fondo con skyline de la ciudad',
+      // --- ES HOME DETAILS ---
+      stats: {
+        value: "Valor de Propiedad",
+        investors: "Inversores",
+        yield: "Rendimiento Prom.",
+        onChain: "En Cadena"
+      },
+      features: {
+        mainTitle: "¿Por qué TerraVest?",
+        mainSubtitle: "Hemos eliminado las barreras de entrada. Sin bancos, sin papeleo, sin tarifas ocultas. Solo propiedad pura.",
+        rentTitle: "Visibilidad Mensual de Renta",
+        rentDesc: "Los ingresos de alquiler se acumulan diariamente según tus tokens y son visibles en tu panel al comienzo de cada mes.",
+        legalTitle: "Estructura Legal de EE.UU.",
+        legalDesc: "Cada propiedad es poseída por una LLC dedicada de EE.UU. Los tokens representan derechos de propiedad indirecta, protegidos por la ley estadounidense.",
+        liquidityTitle: "Liquidez del Mercado Secundario",
+        liquidityDesc: "Los tokens se pueden vender en mercados secundarios soportados, dándote flexibilidad sin esperar meses para una venta de propiedad."
+      },
+      finalCta: {
+        title: "¿Listo para construir tu portafolio?",
+        subtitle: "Comienza a ganar ingresos de alquiler diarios con claridad mensual.",
+        button: "Empieza a Invertir Ahora"
+      }
     },
     landing: {
       heroImageAlt: 'Skyline inmobiliario de Miami',
@@ -1758,6 +1846,28 @@ export const content: Record<LangType, Content> = {
       heroCtaPrimary: 'Voir les Biens',
       heroCtaSecondary: 'Créer un Compte',
       heroBackgroundAlt: 'Fond avec skyline de la ville',
+      // --- FR HOME DETAILS ---
+      stats: {
+        value: "Valeur de Propriété",
+        investors: "Investisseurs",
+        yield: "Rendement Moyen",
+        onChain: "On-Chain"
+      },
+      features: {
+        mainTitle: "Pourquoi TerraVest ?",
+        mainSubtitle: "Nous avons supprimé les barrières à l'entrée. Pas de banques, pas de paperasse, pas de frais cachés. Juste la propriété pure.",
+        rentTitle: "Visibilité Mensuelle du Loyer",
+        rentDesc: "Les revenus locatifs s'accumulent quotidiennement en fonction de vos jetons et deviennent visibles sur votre tableau de bord au début de chaque mois.",
+        legalTitle: "Structure Juridique Américaine",
+        legalDesc: "Chaque propriété est détenue par une LLC américaine dédiée. Les jetons représentent des droits de propriété indirects, protégés par la loi américaine sur la propriété.",
+        liquidityTitle: "Liquidité du Marché Secondaire",
+        liquidityDesc: "Les jetons peuvent être vendus sur les marchés secondaires pris en charge, vous offrant une flexibilité sans attendre des mois pour une vente immobilière."
+      },
+      finalCta: {
+        title: "Prêt à construire votre portefeuille ?",
+        subtitle: "Commencez à gagner des revenus locatifs quotidiens avec une clarté mensuelle.",
+        button: "Commencez à Investir Maintenant"
+      }
     },
     landing: {
       heroImageAlt: 'Skyline immobilier de Miami',
@@ -2000,14 +2110,14 @@ export const content: Record<LangType, Content> = {
       estPaymentLabel: 'Paiement Est. :',
       minDepositNote:
         'Le dépôt minimum est {min}. Votre solde sera mis à jour automatiquement après 1 confirmation réseau.',
-      submitLoading: 'Génération de l\'adresse...',
+      submitLoading: "Génération de l'adresse...",
       submitContinue: 'Continuer',
       toastMinimumDeposit: 'Le dépôt minimum est {min}',
       toastAddressGenerated: 'Adresse de dépôt générée !',
       toastSessionError:
         'Impossible de lire la session. Rafraîchissez la page et reconnectez-vous.',
       toastCreateOrderFailed:
-        'Impossible de créer la commande. Le backend est-il en cours d\'exécution ?',
+        "Impossible de créer la commande. Le backend est-il en cours d'exécution ?",
     },
     settings: {
       title: 'Paramètres du Compte',
@@ -2059,71 +2169,71 @@ export const content: Record<LangType, Content> = {
       loginButton: 'Connexion',
       loginButtonLoading: 'Chargement...',
       loginNoAccount: "Vous n'avez pas de compte ?",
- loginRegisterLink : 'S inscrire',
- loginBotError : 'Confirmez que vous n etes pas un robot',
- loginWelcome : 'Bon retour!',
- loginFailed : 'Connexion echouee',
- loginSecurityError : 'Échec du chargement de la verification.',
- registerTitlePrefix : 'Rejoignez',
- registerTitleBrand : 'TerraVest',
- registerSubtitle : 'Créez votre compte pour commencer a investir',
- registerBullet1 : 'Gagnez un loyer quotidien, visible mensuellement',
- registerBullet2 : 'Biens détenus via LLC aux USA',
- registerBullet3 : 'A partir de $50 - sans banques, sans paperasse',
- registerUsernamePlaceholder : 'Utilisateur',
- registerUsernameHint :
- 'Nom public. Doit être unique - modifiable plus tard.',
- registerEmailPlaceholder : 'Adresse Email',
- registerPasswordPlaceholder : 'Mot de Passe',
- registerConfirmPasswordPlaceholder : 'Confirmer le Mot de Passe',
- registerPasswordRequirementsTitle : 'Exigences de Mot de Passe:',
- registerRequirementLength : 'Au moins 8 caracteres',
- registerRequirementUpper : 'Au moins une majuscule (A-Z)',
- registerRequirementLower : 'Au moins une minuscule (a-z)',
- registerRequirementNumber : 'Au moins un numero (0-9)',
- registerRequirementSpecial : 'Au moins un caractere special (!@#$)',
- registerButton : 'Créer un Compte',
- registerButtonLoading : 'Creation du compte...',
- registerTerms :
- 'En creant un compte, vous reconnaissez que ces investissements comportent un risque.',
- registerTermsLink : 'En savoir plus',
- registerTrustedBy : 'Deja choisi par des investisseurs de 40+ pays',
- registerHaveAccount : 'Vous avez déjà un compte?',
- registerLoginLink : 'Connexion',
- toastRegisterMismatch : 'Les mots de passe ne correspondent pas.',
- toastRegisterRequirements : 'Veuillez respecter tous les criteres.',
- toastRegisterCreated : 'Compte créé avec succes!',
- toastRegisterSuccessLogin : 'Inscription réussie! Connectez-vous.',
- },
- propertyDetails : {
- notFound : 'Bien introuvable.',
- backToMarketplace : 'Retour au Marketplace',
- backToMarket : 'Retour au Marche',
- tokenizedAsset : 'Actif Tokenisé',
- estYield : 'Rendement Est.',
- investmentSummary : 'Resume d Investissement',
- propertyHighlights : 'Points Forts',
- highlight1 : 'Bien gere completement',
- highlight2 : 'Paiements de loyer mensuels',
- highlight3 : 'Fort potentiel d appreciation',
- highlight4 : 'Propriete légale via LLC',
- investTitle : 'Investir dans cet Actif',
- investSubtitle : 'Propriete instantanee via tokens TerraVest',
- tokenPrice : 'Prix du Token',
- available : 'Disponible',
- amountTokens : 'Montant (Tokens)',
- tokensLabel : 'Tokens',
- total : 'Total:',
- loginToInvest : 'Vous devez être connecte pour investir.',
- confirmInvestment : 'Confirmer l Investissement',
- secureTransaction : 'Transaction sécurisée via TerraVest',
- assetValue : 'Valeur de l Actif',
- totalTokens : 'Total des Tokens',
- orderCreated : 'Commande créée! Allez au tableau de bord pour payer.',
- orderFailed : 'Échec de la commande.',
- loginToInvestButton : 'Connexion pour investir',
- locationFallback : 'États-Unis',
- notAvailable : 'N/A',
+      loginRegisterLink: 'S inscrire',
+      loginBotError: 'Confirmez que vous n etes pas un robot',
+      loginWelcome: 'Bon retour!',
+      loginFailed: 'Connexion echouee',
+      loginSecurityError: 'Échec du chargement de la verification.',
+      registerTitlePrefix: 'Rejoignez',
+      registerTitleBrand: 'TerraVest',
+      registerSubtitle: 'Créez votre compte pour commencer a investir',
+      registerBullet1: 'Gagnez un loyer quotidien, visible mensuellement',
+      registerBullet2: 'Biens détenus via LLC aux USA',
+      registerBullet3: 'A partir de $50 - sans banques, sans paperasse',
+      registerUsernamePlaceholder: 'Utilisateur',
+      registerUsernameHint:
+        'Nom public. Doit être unique - modifiable plus tard.',
+      registerEmailPlaceholder: 'Adresse Email',
+      registerPasswordPlaceholder: 'Mot de Passe',
+      registerConfirmPasswordPlaceholder: 'Confirmer le Mot de Passe',
+      registerPasswordRequirementsTitle: 'Exigences de Mot de Passe:',
+      registerRequirementLength: 'Au moins 8 caracteres',
+      registerRequirementUpper: 'Au moins une majuscule (A-Z)',
+      registerRequirementLower: 'Au moins une minuscule (a-z)',
+      registerRequirementNumber: 'Au moins un numero (0-9)',
+      registerRequirementSpecial: 'Au moins un caractere special (!@#$)',
+      registerButton: 'Créer un Compte',
+      registerButtonLoading: 'Creation du compte...',
+      registerTerms:
+        'En creant un compte, vous reconnaissez que ces investissements comportent un risque.',
+      registerTermsLink: 'En savoir plus',
+      registerTrustedBy: 'Deja choisi par des investisseurs de 40+ pays',
+      registerHaveAccount: 'Vous avez déjà un compte?',
+      registerLoginLink: 'Connexion',
+      toastRegisterMismatch: 'Les mots de passe ne correspondent pas.',
+      toastRegisterRequirements: 'Veuillez respecter tous les criteres.',
+      toastRegisterCreated: 'Compte créé avec succes!',
+      toastRegisterSuccessLogin: 'Inscription réussie! Connectez-vous.',
+    },
+    propertyDetails: {
+      notFound: 'Bien introuvable.',
+      backToMarketplace: 'Retour au Marketplace',
+      backToMarket: 'Retour au Marche',
+      tokenizedAsset: 'Actif Tokenisé',
+      estYield: 'Rendement Est.',
+      investmentSummary: 'Resume d Investissement',
+      propertyHighlights: 'Points Forts',
+      highlight1: 'Bien gere completement',
+      highlight2: 'Paiements de loyer mensuels',
+      highlight3: 'Fort potentiel d appreciation',
+      highlight4: 'Propriete légale via LLC',
+      investTitle: 'Investir dans cet Actif',
+      investSubtitle: 'Propriete instantanee via tokens TerraVest',
+      tokenPrice: 'Prix du Token',
+      available: 'Disponible',
+      amountTokens: 'Montant (Tokens)',
+      tokensLabel: 'Tokens',
+      total: 'Total:',
+      loginToInvest: 'Vous devez être connecte pour investir.',
+      confirmInvestment: 'Confirmer l Investissement',
+      secureTransaction: 'Transaction sécurisée via TerraVest',
+      assetValue: 'Valeur de l Actif',
+      totalTokens: 'Total des Tokens',
+      orderCreated: 'Commande créée! Allez au tableau de bord pour payer.',
+      orderFailed: 'Échec de la commande.',
+      loginToInvestButton: 'Connexion pour investir',
+      locationFallback: 'États-Unis',
+      notAvailable: 'N/A',
     },
   },
 };

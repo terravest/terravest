@@ -10,7 +10,7 @@ import { formatCurrency, formatDate, formatTime } from '../utils/format';
 // Flexible type definition compatible with backend data
 interface Transaction {
     id: number;
-    type: string; // Can be 'DEPOSIT', 'WITHDRAWAL', 'SELL' etc., keeping as string for flexibility.
+    type: string; // Can be 'DEPOSIT', 'WITHDRAWAL', 'SELL' etc.
     amount: number;
     status: string;
     created_at: string;
@@ -169,7 +169,8 @@ export default function TransactionHistory() {
                                         {/* AMOUNT */}
                                         <td className="px-6 py-4 font-bold text-slate-900">
                                             <span className={isPositive ? 'text-green-600' : 'text-slate-900'}>
-                                                {isPositive ? '+' : '-'}{formatCurrency(Math.abs(tx.amount), lang)}
+                                                {/* 💰 DÜZELTME: Cent -> Dolar çevrimi (/ 100) */}
+                                                {isPositive ? '+' : '-'}{formatCurrency(Math.abs(tx.amount) / 100, lang)}
                                             </span>
                                         </td>
 

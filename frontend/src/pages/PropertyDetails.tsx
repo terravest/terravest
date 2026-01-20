@@ -31,11 +31,9 @@ export default function PropertyDetails() {
         async function load() {
             try {
                 if (id) {
-                    // Updated endpoint in backend (returns images as array)
                     const property = await api.getProperty(id);
                     setProp(property);
                 } else {
-                    // If no ID, return to list
                     navigate(getLink('/marketplace'));
                 }
             } catch (e) {
@@ -85,7 +83,12 @@ export default function PropertyDetails() {
         </div>
     );
 
-    const tokenPrice = prop.price_usd / prop.total_tokens;
+    // 💰 FİYAT DÜZELTMESİ (CENT -> DOLAR)
+    // Backend'den gelen price_usd Cent cinsinden olduğu için 100'e bölüyoruz.
+    // Token fiyatı da (Toplam Fiyat / Toplam Token) / 100 şeklinde hesaplanıyor.
+    const assetPriceDollars = prop.price_usd / 100;
+    const tokenPriceDollars = (prop.price_usd / prop.total_tokens) / 100;
+
     const yieldLabel = (() => {
         if (prop.rental_yield === null || prop.rental_yield === undefined) return t.propertyDetails.notAvailable;
         if (typeof prop.rental_yield === 'number') {
@@ -99,7 +102,6 @@ export default function PropertyDetails() {
     })();
 
     // --- IMAGE PREPARATION ---
-    // If 'images' array comes from backend, use it, otherwise make 'image_url' a single-element array.
     const images = prop.images && prop.images.length > 0
         ? prop.images
         : (prop.image_url ? [{ id: null, url: prop.image_url, isMain: true, displayOrder: 0 }] : []);
@@ -153,13 +155,15 @@ export default function PropertyDetails() {
                         <div className="pl-2">
                             <span className="block text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-1">{t.propertyDetails.assetValue}</span>
                             <span className="text-lg md:text-xl font-bold text-[#0F172A]">
-                                {formatCurrency(prop.price_usd, lang)}
+                                {/* DÜZELTME: Dolar cinsinden gösterim */}
+                                {formatCurrency(assetPriceDollars, lang)}
                             </span>
                         </div>
                         <div className="pl-6">
                             <span className="block text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-1">{t.propertyDetails.tokenPrice}</span>
                             <span className="text-lg md:text-xl font-bold text-[#009B9E]">
-                                {formatCurrency(tokenPrice, lang)}
+                                {/* DÜZELTME: Dolar cinsinden gösterim */}
+                                {formatCurrency(tokenPriceDollars, lang)}
                             </span>
                         </div>
                         <div className="pl-6">
@@ -208,7 +212,8 @@ export default function PropertyDetails() {
                         <div className="bg-slate-50 p-4 rounded-xl mb-6 border border-slate-100">
                             <div className="flex justify-between mb-2">
                                 <span className="text-xs font-bold text-slate-500 uppercase">{t.propertyDetails.tokenPrice}</span>
-                                <span className="font-bold text-[#0F172A]">{formatCurrency(tokenPrice, lang)}</span>
+                                {/* DÜZELTME: Dolar cinsinden gösterim */}
+                                <span className="font-bold text-[#0F172A]">{formatCurrency(tokenPriceDollars, lang)}</span>
                             </div>
                             <div className="flex justify-between">
                                 <span className="text-xs font-bold text-slate-500 uppercase">{t.propertyDetails.available}</span>
@@ -238,7 +243,8 @@ export default function PropertyDetails() {
                             <div className="flex justify-between items-center py-2 border-t border-slate-50 mt-2">
                                 <span className="font-bold text-slate-500 text-sm">{t.propertyDetails.total}</span>
                                 <span className="text-2xl font-bold text-[#009B9E]">
-                                    {formatCurrency(buyAmount * tokenPrice, lang)}
+                                    {/* DÜZELTME: Hesaplamada doğru Dolar değeri kullanıldı */}
+                                    {formatCurrency(buyAmount * tokenPriceDollars, lang)}
                                 </span>
                             </div>
 

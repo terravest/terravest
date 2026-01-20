@@ -15,38 +15,45 @@ export async function handleWithdraw(request: Request, env: Env): Promise<Respon
         const body = await request.json() as any;
         const { amount, btc_address } = body;
 
-        // SECURITY FIX: Explicit validation for amount (prevent negative numbers, NaN, etc.)
-        const amountNum = Number(amount);
-        if (isNaN(amountNum) || amountNum <= 0) {
+        // 💰 FINANCIAL INTEGRITY: Amount is in CENTS
+        const amountCents = Number(amount);
+
+        if (isNaN(amountCents) || amountCents <= 0) {
             return errorResponse("Amount must be a positive number", 400);
         }
-        if (amountNum < 50) {
-            return errorResponse("Minimum withdrawal amount is $50", 400);
+
+        // $50.00 Limit = 5000 Cents
+        if (amountCents < 5000) {
+            return errorResponse("Minimum withdrawal amount is $50.00", 400);
         }
+
         if (!btc_address || btc_address.length < 10) {
             return errorResponse("Invalid Bitcoin address", 400);
         }
 
         const db = env.terravest_db;
 
-        // Check user's current balance
+        // Check user's current balance (Cents)
         const currentUser = await db.prepare("SELECT usd_balance FROM users WHERE id = ?").bind(user.id).first();
 
-        if (!currentUser || Number(currentUser.usd_balance) < amountNum) {
+        if (!currentUser || (currentUser.usd_balance as number) < amountCents) {
             return errorResponse("Insufficient balance", 400);
         }
 
         // Atomic transaction: deduct balance and create withdrawal request
-        // Note: Frontend sends 'btc_address', stored as 'address' in database
         await db.batch([
-            // Deduct balance immediately to prevent double withdrawal
-            db.prepare("UPDATE users SET usd_balance = usd_balance - ? WHERE id = ?").bind(amountNum, user.id),
+            // Deduct balance (Cents)
+            db.prepare("UPDATE users SET usd_balance = usd_balance - ? WHERE id = ?").bind(amountCents, user.id),
 
             // Create withdrawal request
             db.prepare(`
                 INSERT INTO withdrawals (user_id, amount, address, status)
                 VALUES (?, ?, ?, 'pending')
-            `).bind(user.id, amountNum, btc_address)
+            `).bind(user.id, amountCents, btc_address),
+
+            // Log Transaction
+            db.prepare("INSERT INTO transactions (user_id, type, amount, description) VALUES (?, 'withdraw', ?, ?)")
+                .bind(user.id, -amountCents, `Withdrawal to ${btc_address.slice(0, 6)}...`)
         ]);
 
         return json({

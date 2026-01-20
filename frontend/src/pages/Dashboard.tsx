@@ -65,27 +65,40 @@ export default function Dashboard() {
 
     const [isProcessing, setIsProcessing] = useState(false);
 
-    // --- CALCULATIONS (TOTAL NET WORTH) ---
-    const cashBalance = user?.usd_balance || 0;
+    // --- CALCULATIONS (TOTAL NET WORTH - ALL IN CENTS FIRST) ---
 
-    const getUnitPrice = (asset: any) => {
+    // 💰 Cash Balance (Backend sends Cents)
+    const cashBalanceCents = user?.usd_balance || 0;
+
+    // Helper: Get Unit Price in Cents
+    const getUnitPriceCents = (asset: any) => {
         if (!asset.price_usd || !asset.total_tokens) return 0;
-        return asset.price_usd / asset.total_tokens;
+        // asset.price_usd is total property value in Cents
+        return Math.floor(asset.price_usd / asset.total_tokens);
     };
 
-    const assetsValue = data?.assets?.reduce((acc: number, asset: any) => {
-        const price = asset.current_price || getUnitPrice(asset);
-        return acc + (asset.investedAmount * price);
+    // Calculate Asset Value in Cents
+    const assetsValueCents = data?.assets?.reduce((acc: number, asset: any) => {
+        const priceCents = asset.current_price ? (asset.current_price * 100) : getUnitPriceCents(asset);
+        return acc + (asset.investedAmount * priceCents);
     }, 0) || 0;
 
-    const pendingRewards = data?.assets?.reduce((acc: number, asset: any) => acc + (asset.unclaimed_rewards || 0), 0) || 0;
-    const totalNetWorth = cashBalance + assetsValue + pendingRewards;
+    // Pending Rewards in Cents
+    const pendingRewardsCents = data?.assets?.reduce((acc: number, asset: any) => acc + (asset.unclaimed_rewards || 0), 0) || 0;
 
-    // --- FEE CALCULATION LOGIC ---
-    const wAmount = parseFloat(withdrawAmount) || 0;
-    const wFee = 5 + (wAmount * 0.01); // $5 + %1
-    const wNet = wAmount > 0 ? wAmount - wFee : 0;
-    const isBalanceSufficient = wAmount <= cashBalance;
+    // Total Net Worth in Cents
+    const totalNetWorthCents = cashBalanceCents + assetsValueCents + pendingRewardsCents;
+
+    // --- WITHDRAWAL LOGIC (DOLLAR INPUT -> CENT LOGIC) ---
+    const wAmountDollars = parseFloat(withdrawAmount) || 0;
+    const wAmountCents = Math.round(wAmountDollars * 100);
+
+    // Fee Calculation (Displayed in Dollars)
+    const wFeeDollars = 5 + (wAmountDollars * 0.01); // $5 + 1%
+    const wNetDollars = wAmountDollars > 0 ? wAmountDollars - wFeeDollars : 0;
+
+    // Balance Check (Compare Cents to Cents)
+    const isBalanceSufficient = wAmountCents <= cashBalanceCents;
 
     // --- ACTIONS ---
 
@@ -114,10 +127,17 @@ export default function Dashboard() {
     const handleClaim = async () => {
         setIsProcessing(true);
         try {
+            // Backend handles the claim logic, returning amount in Dollars usually or updated balance
             const res = await api.claimRewards();
+
+            // Note: Check what api.claimRewards returns. Assuming it returns object with amount_claimed.
+            // If backend sends Cents, divide by 100. If Dollars, keep as is.
+            // Assuming updated backend sends Cents:
+            const amountClaimedDollars = res.amount_claimed ? (res.amount_claimed / 100) : 0;
+
             const claimMessage = t.dashboard.toastClaimSuccess.replace(
                 '${amount}',
-                formatCurrency(res.amount_claimed, lang)
+                formatCurrency(amountClaimedDollars, lang)
             );
             toast.success(claimMessage);
             setClaimModalOpen(false);
@@ -132,10 +152,9 @@ export default function Dashboard() {
 
     const handleWithdraw = async (e: React.FormEvent) => {
         e.preventDefault();
-        const amount = parseFloat(withdrawAmount);
 
-        if (amount < 50) return toast.error(t.dashboard.toastMinWithdrawal);
-        if (amount > cashBalance) return toast.error(t.dashboard.toastInsufficientCash);
+        if (wAmountDollars < 50) return toast.error(t.dashboard.toastMinWithdrawal);
+        if (!isBalanceSufficient) return toast.error(t.dashboard.toastInsufficientCash);
         if (withdrawAddress.length < 10) return toast.error(t.dashboard.toastInvalidBtc);
 
         setIsProcessing(true);
@@ -145,7 +164,8 @@ export default function Dashboard() {
             const res = await fetch(`${API_BASE_URL}/withdraw`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ amount, btc_address: withdrawAddress })
+                // 💰 Send CENTS to backend
+                body: JSON.stringify({ amount: wAmountCents, btc_address: withdrawAddress })
             });
             const json = await res.json();
             if (!res.ok) throw new Error(json.error);
@@ -203,7 +223,8 @@ export default function Dashboard() {
                                             <span className="text-sm font-bold tracking-widest uppercase">{t.dashboard.totalNetWorth}</span>
                                         </div>
                                         <h2 className="text-5xl font-black tracking-tight mb-8">
-                                            {formatCurrency(totalNetWorth, lang)}
+                                            {/* Display: Cents / 100 */}
+                                            {formatCurrency(totalNetWorthCents / 100, lang)}
                                         </h2>
                                     </div>
                                     {/* WITHDRAW BUTTON */}
@@ -219,15 +240,15 @@ export default function Dashboard() {
                                 <div className="grid grid-cols-3 gap-6 border-t border-white/10 pt-6">
                                     <div>
                                         <p className="text-xs text-slate-400 font-bold uppercase mb-1">{t.dashboard.cashBalance}</p>
-                                        <p className="text-xl font-bold">{formatCurrency(cashBalance, lang)}</p>
+                                        <p className="text-xl font-bold">{formatCurrency(cashBalanceCents / 100, lang)}</p>
                                     </div>
                                     <div>
                                         <p className="text-xs text-slate-400 font-bold uppercase mb-1">{t.dashboard.assetValue}</p>
-                                        <p className="text-xl font-bold text-[#00E5FF]">{formatCurrency(assetsValue, lang)}</p>
+                                        <p className="text-xl font-bold text-[#00E5FF]">{formatCurrency(assetsValueCents / 100, lang)}</p>
                                     </div>
                                     <div>
                                         <p className="text-xs text-slate-400 font-bold uppercase mb-1">{t.dashboard.unclaimedRent}</p>
-                                        <p className="text-xl font-bold text-green-400">{formatCurrency(pendingRewards, lang)}</p>
+                                        <p className="text-xl font-bold text-green-400">{formatCurrency(pendingRewardsCents / 100, lang)}</p>
                                     </div>
                                 </div>
                             </div>
@@ -240,14 +261,14 @@ export default function Dashboard() {
                                     <div className="bg-green-100 p-2 rounded-lg text-green-600"><DollarSign size={20} /></div>
                                     <span className="font-bold text-slate-700">{t.dashboard.rewards}</span>
                                 </div>
-                                <p className="text-3xl font-bold text-green-600 mb-1">{formatCurrency(pendingRewards, lang)}</p>
+                                <p className="text-3xl font-bold text-green-600 mb-1">{formatCurrency(pendingRewardsCents / 100, lang)}</p>
                                 <p className="text-xs text-slate-400">{t.dashboard.rewardsSubtitle}</p>
                             </div>
                             <button
                                 onClick={() => setClaimModalOpen(true)}
-                                disabled={pendingRewards <= 0.01}
+                                disabled={pendingRewardsCents <= 1} // <= 1 cent
                                 className={`w-full py-3 rounded-xl font-bold text-sm transition mt-4
-                                    ${pendingRewards > 0.01
+                                    ${pendingRewardsCents > 1
                                         ? "bg-green-500 hover:bg-green-600 text-white shadow-lg shadow-green-200"
                                         : "bg-slate-100 text-slate-400 cursor-not-allowed"}`}
                             >
@@ -267,8 +288,9 @@ export default function Dashboard() {
                             data-testid="portfolio-assets-list"
                         >
                             {data.assets.map((asset: any, index: number) => {
-                                const unitPrice = getUnitPrice(asset);
-                                const currentValue = asset.investedAmount * unitPrice;
+                                const unitPriceCents = getUnitPriceCents(asset);
+                                const currentValueCents = asset.investedAmount * unitPriceCents;
+
                                 return (
                                     <div
                                         key={index}
@@ -290,19 +312,21 @@ export default function Dashboard() {
                                                         data-testid={`portfolio-token-amount-${asset.property_id}`}
                                                     >
                                                         {formatNumber(asset.investedAmount, lang, {
-                                                            minimumFractionDigits: 2,
-                                                            maximumFractionDigits: 2
+                                                            minimumFractionDigits: 0,
+                                                            maximumFractionDigits: 0
                                                         })}
                                                     </span>
                                                 </div>
                                                 <div className="flex justify-between text-sm">
                                                     <span className="text-slate-400">{t.dashboard.currentValue}</span>
-                                                    <span className="font-bold text-[#0F172A]">{formatCurrency(currentValue, lang)}</span>
+                                                    <span className="font-bold text-[#0F172A]">
+                                                        {formatCurrency(currentValueCents / 100, lang)}
+                                                    </span>
                                                 </div>
                                                 <div className="flex justify-between text-sm">
                                                     <span className="text-slate-400">{t.dashboard.unclaimedRent}</span>
                                                     <span className="font-bold text-green-600">
-                                                        +{formatCurrency(asset.unclaimed_rewards || 0, lang, 'USD', {
+                                                        +{formatCurrency((asset.unclaimed_rewards || 0) / 100, lang, 'USD', {
                                                             minimumFractionDigits: 4,
                                                             maximumFractionDigits: 4
                                                         })}
@@ -364,7 +388,7 @@ export default function Dashboard() {
                                 <div className="flex justify-between text-sm">
                                     <span className="text-slate-500">{t.dashboard.pricePerToken}</span>
                                     <span className="font-bold text-[#009B9E]">
-                                        {formatCurrency(getUnitPrice(selectedAsset), lang)}
+                                        {formatCurrency(getUnitPriceCents(selectedAsset) / 100, lang)}
                                     </span>
                                 </div>
                             </div>
@@ -408,7 +432,7 @@ export default function Dashboard() {
 
                         <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-6">
                             <p className="text-slate-500 text-xs font-bold uppercase">{t.dashboard.totalAmount}</p>
-                            <p className="text-3xl font-black text-green-600">{formatCurrency(pendingRewards, lang)}</p>
+                            <p className="text-3xl font-black text-green-600">{formatCurrency(pendingRewardsCents / 100, lang)}</p>
                         </div>
 
                         <button onClick={handleClaim} disabled={isProcessing} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2">
@@ -429,7 +453,7 @@ export default function Dashboard() {
                         <form onSubmit={handleWithdraw} className="space-y-5">
                             <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex justify-between items-center">
                                 <span className="text-slate-500 text-sm font-bold">{t.dashboard.availableCash}</span>
-                                <span className="font-bold text-[#0F172A]">{formatCurrency(cashBalance, lang)}</span>
+                                <span className="font-bold text-[#0F172A]">{formatCurrency(cashBalanceCents / 100, lang)}</span>
                             </div>
 
                             <div>
@@ -439,34 +463,34 @@ export default function Dashboard() {
                                         type="number"
                                         step="10"
                                         min="50"
-                                        max={cashBalance}
+                                        max={cashBalanceCents / 100}
                                         required
-                                        className={`w-full bg-white border rounded-xl p-3 text-lg font-bold outline-none focus:ring-2 transition ${!isBalanceSufficient && wAmount > 0 ? 'border-red-300 focus:ring-red-200 text-red-600' : 'border-slate-200 focus:ring-[#009B9E] text-slate-900'}`}
+                                        className={`w-full bg-white border rounded-xl p-3 text-lg font-bold outline-none focus:ring-2 transition ${!isBalanceSufficient && wAmountDollars > 0 ? 'border-red-300 focus:ring-red-200 text-red-600' : 'border-slate-200 focus:ring-[#009B9E] text-slate-900'}`}
                                         placeholder={t.dashboard.amountToWithdrawPlaceholder}
                                         value={withdrawAmount}
                                         onChange={e => setWithdrawAmount(e.target.value)}
                                     />
-                                    {!isBalanceSufficient && wAmount > 0 && (
+                                    {!isBalanceSufficient && wAmountDollars > 0 && (
                                         <p className="text-red-500 text-xs mt-1 font-bold">{t.dashboard.insufficientFunds}</p>
                                     )}
                                 </div>
                             </div>
 
                             {/* DYNAMIC FEE CALCULATION BOX */}
-                            {wAmount > 0 && (
+                            {wAmountDollars > 0 && (
                                 <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 space-y-2">
                                     <div className="flex justify-between text-sm text-slate-500">
                                         <span>{t.dashboard.withdrawalAmountLabel}</span>
-                                        <span>{formatCurrency(wAmount, lang)}</span>
+                                        <span>{formatCurrency(wAmountDollars, lang)}</span>
                                     </div>
                                     <div className="flex justify-between text-sm text-red-500">
                                         <span>{t.dashboard.processingFeeLabel}</span>
-                                        <span>-{formatCurrency(wFee, lang)}</span>
+                                        <span>-{formatCurrency(wFeeDollars, lang)}</span>
                                     </div>
                                     <div className="border-t border-slate-200 pt-2 flex justify-between font-bold text-[#0F172A]">
                                         <span>{t.dashboard.youWillReceive}</span>
                                         <span className="flex items-center gap-1">
-                                            <Calculator size={14} /> {formatCurrency(wNet, lang)}
+                                            <Calculator size={14} /> {formatCurrency(wNetDollars, lang)}
                                         </span>
                                     </div>
                                 </div>

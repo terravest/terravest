@@ -20,7 +20,8 @@ export const handleSell = async (request: Request, env: Env) => {
             return errorResponse("token_amount is required and must be a positive number", 400);
         }
 
-        // Check property existence first
+        // Check property existence
+        // token_price is stored in CENTS
         const property = await db.prepare("SELECT token_price FROM properties WHERE id = ?").bind(property_id).first();
 
         if (!property || !property.token_price) {
@@ -33,57 +34,57 @@ export const handleSell = async (request: Request, env: Env) => {
             return errorResponse("Insufficient tokens to sell", 400);
         }
 
-        // Calculate price and fees
+        // 💰 FINANCIAL INTEGRITY: Integer Math (Cents)
+        const unitPriceCents = property.token_price as number;
 
-        const rawReturn = Number(property.token_price) * token_amount; // Gross sale amount
-        const fee = rawReturn * TRADING_FEE_RATE; // Trading fee
-        const netReturn = rawReturn - fee; // Net amount to credit user
+        const rawReturnCents = unitPriceCents * token_amount; // Gross sale amount (Cents)
+        const feeCents = Math.floor(rawReturnCents * TRADING_FEE_RATE); // Trading fee (Cents) - Floored
+        const netReturnCents = rawReturnCents - feeCents; // Net amount to credit user (Cents)
 
         // Atomic transaction operations
         const queries = [];
 
-        // SECURITY FIX: Decrease investment token amount WITH condition to prevent negative amounts
-        // This prevents race conditions where two concurrent requests could both pass the initial check
+        // Decrease investment token amount
         queries.push(
-            db.prepare("UPDATE investments SET token_amount = token_amount - ?, total_invested = COALESCE(total_invested, 0) - ? WHERE id = ? AND token_amount >= ?")
-                .bind(token_amount, rawReturn, investment.id, token_amount)
+            db.prepare("UPDATE investments SET token_amount = token_amount - ?, total_invested = MAX(0, COALESCE(total_invested, 0) - ?) WHERE id = ? AND token_amount >= ?")
+                .bind(token_amount, rawReturnCents, investment.id, token_amount)
         );
 
-        // Increase property token stock
+        // Increase property token stock (Tokens return to pool)
         queries.push(
             db.prepare("UPDATE properties SET available_tokens = available_tokens + ? WHERE id = ?").bind(token_amount, property_id)
         );
 
-        // Credit user balance with net amount
+        // Credit user balance with net amount (Cents)
         queries.push(
-            db.prepare("UPDATE users SET usd_balance = usd_balance + ? WHERE id = ?").bind(netReturn, user.id)
+            db.prepare("UPDATE users SET usd_balance = usd_balance + ? WHERE id = ?").bind(netReturnCents, user.id)
+        );
+
+        // Log Transaction
+        queries.push(
+            db.prepare("INSERT INTO transactions (user_id, type, amount, description) VALUES (?, 'sell', ?, ?)")
+                .bind(user.id, netReturnCents, `Sold ${token_amount} tokens`)
         );
 
         await db.batch(queries);
 
-        // SECURITY FIX: Verify the investment was actually updated (prevent race conditions)
+        // Race condition check (Double validation)
         const verifyInvestment = await db.prepare("SELECT token_amount FROM investments WHERE id = ?").bind(investment.id).first();
         if (!verifyInvestment || (verifyInvestment.token_amount as number) < 0) {
-            // Rollback: reverse all operations
-            await db.batch([
-                db.prepare("UPDATE investments SET token_amount = token_amount + ?, total_invested = COALESCE(total_invested, 0) + ? WHERE id = ?")
-                    .bind(token_amount, rawReturn, investment.id),
-                db.prepare("UPDATE properties SET available_tokens = available_tokens - ? WHERE id = ?").bind(token_amount, property_id),
-                db.prepare("UPDATE users SET usd_balance = usd_balance - ? WHERE id = ?").bind(netReturn, user.id)
-            ]);
-            return errorResponse("Insufficient tokens (race condition detected). Please try again.", 409);
+            // Critical error: Negative balance implies race condition.
+            // In a real production system with proper locking this is rare, 
+            // but for SQLite D1 we rely on the WHERE clause in UPDATE.
+            return errorResponse("Transaction failed verification. Please contact support.", 500);
         }
 
-        // Clean up: delete investment record if amount reaches zero
-        if ((verifyInvestment.token_amount as number) <= 0) {
-            await db.prepare("DELETE FROM investments WHERE id = ?").bind(investment.id).run();
-        }
+        // Cleanup: If 0 tokens left, we can keep the record for history or mark as inactive.
+        // Keeping it is better for history.
 
         return json({
             success: true,
             message: "Asset sold successfully. Funds added to your balance.",
-            fee_deducted: fee,
-            amount_added: netReturn
+            fee_deducted: feeCents, // Cents
+            amount_added: netReturnCents // Cents
         });
 
     } catch (e: any) {

@@ -18,10 +18,10 @@ interface Property {
     title: string;
     description: string;
     location?: string;
-    price_usd: number;
+    price_usd: number; // Backend stores in Cents
     total_tokens: number;
     available_tokens: number;
-    rental_yield?: string; // Changed to string (can be "6-20%", "~12%", etc.)
+    rental_yield?: string; // String value
     image_url?: string;
     images?: PropertyImage[];
     status?: string;
@@ -40,10 +40,10 @@ export default function Properties() {
         title: '',
         description: '',
         location: '',
-        price_usd: '',
+        price_usd: '', // Input in Dollars
         total_tokens: '',
         available_tokens: '',
-        rental_yield: '', // Changed to string
+        rental_yield: '',
     });
 
     const [images, setImages] = useState<PropertyImage[]>([]);
@@ -76,7 +76,7 @@ export default function Properties() {
             location: '',
             price_usd: '',
             total_tokens: '',
-            available_tokens: '', // Will be synced with total_tokens on change
+            available_tokens: '',
             rental_yield: '',
         });
         setImages([]);
@@ -93,10 +93,11 @@ export default function Properties() {
                 title: fullProperty.title || '',
                 description: fullProperty.description || '',
                 location: fullProperty.location || '',
-                price_usd: fullProperty.price_usd?.toString() || '',
+                // 💰 DÜZELTME: Cent -> Dolar çevrimi (Edit modunda input doğru görünsün diye)
+                price_usd: fullProperty.price_usd ? (fullProperty.price_usd / 100).toString() : '',
                 total_tokens: fullProperty.total_tokens?.toString() || '',
                 available_tokens: fullProperty.available_tokens?.toString() || '',
-                rental_yield: fullProperty.rental_yield || '', // String value
+                rental_yield: fullProperty.rental_yield || '',
             });
             // Set images from property_images or fallback to image_url
             if (fullProperty.images && fullProperty.images.length > 0) {
@@ -133,7 +134,6 @@ export default function Properties() {
             alert('Failed to upload images: ' + error.message);
         } finally {
             setUploading(false);
-            // Reset input
             e.target.value = '';
         }
     };
@@ -171,8 +171,8 @@ export default function Properties() {
         try {
             // Validate: available_tokens cannot exceed total_tokens
             const totalTokens = parseInt(formData.total_tokens);
-            const availableTokens = formData.available_tokens 
-                ? parseInt(formData.available_tokens) 
+            const availableTokens = formData.available_tokens
+                ? parseInt(formData.available_tokens)
                 : totalTokens;
 
             if (availableTokens > totalTokens) {
@@ -185,10 +185,11 @@ export default function Properties() {
                 title: formData.title,
                 description: formData.description,
                 location: formData.location || null,
-                price_usd: parseFloat(formData.price_usd),
+                // 💰 DÜZELTME: Dolar -> Cent çevrimi (Backend'e gönderirken x100)
+                price_usd: Math.round(parseFloat(formData.price_usd) * 100),
                 total_tokens: totalTokens,
                 available_tokens: availableTokens,
-                rental_yield: formData.rental_yield || null, // String value (can be "6-20%", "~12%", etc.)
+                rental_yield: formData.rental_yield || null,
                 images: images.map((img, index) => ({
                     url: img.url,
                     isMain: img.isMain,
@@ -289,7 +290,8 @@ export default function Properties() {
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     <span className="font-bold text-[#0F172A]">
-                                                        {formatCurrency(property.price_usd || 0, lang)}
+                                                        {/* 💰 DÜZELTME: Tabloda gösterirken Cent -> Dolar çevrimi (/100) */}
+                                                        {formatCurrency((property.price_usd || 0) / 100, lang)}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4">
@@ -301,25 +303,25 @@ export default function Properties() {
                                                     <span className="text-green-600 font-bold">
                                                         {property.rental_yield !== null && property.rental_yield !== undefined
                                                             ? (() => {
+                                                                // Handle rental_yield if it's string percentage
+                                                                if (typeof property.rental_yield === 'string') return property.rental_yield;
+                                                                // Fallback for old numeric values
                                                                 if (typeof property.rental_yield === 'number') {
-                                                                    const normalized = property.rental_yield > 1 ? property.rental_yield / 100 : property.rental_yield;
-                                                                    return formatPercent(normalized, lang);
+                                                                    const val = property.rental_yield as number;
+                                                                    return formatPercent(val > 1 ? val / 100 : val, lang);
                                                                 }
-                                                                const parsed = parseFloat(property.rental_yield);
-                                                                if (Number.isNaN(parsed)) return property.rental_yield;
-                                                                return formatPercent(parsed / 100, lang);
+                                                                return 'N/A';
                                                             })()
                                                             : 'N/A'}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    <span className={`px-2 py-1 rounded-full text-xs font-bold ${
-                                                        property.status === 'active' 
-                                                            ? 'bg-green-100 text-green-700' 
+                                                    <span className={`px-2 py-1 rounded-full text-xs font-bold ${property.status === 'active'
+                                                            ? 'bg-green-100 text-green-700'
                                                             : property.status === 'deleted'
-                                                            ? 'bg-red-100 text-red-700'
-                                                            : 'bg-slate-100 text-slate-700'
-                                                    }`}>
+                                                                ? 'bg-red-100 text-red-700'
+                                                                : 'bg-slate-100 text-slate-700'
+                                                        }`}>
                                                         {property.status === 'active' ? 'Active' : property.status === 'deleted' ? 'Deleted' : 'Draft'}
                                                     </span>
                                                 </td>
@@ -459,30 +461,21 @@ export default function Properties() {
                                         value={formData.available_tokens}
                                         onChange={(e) => {
                                             const newAvailable = e.target.value;
-                                            const total = parseInt(formData.total_tokens) || 0;
-                                            const available = parseInt(newAvailable) || 0;
-                                            
-                                            // Validate: available cannot exceed total
-                                            if (available > total && formData.total_tokens) {
-                                                // Don't update if exceeds total
-                                                return;
-                                            }
-                                            
+                                            // Validate logic here if needed, but validation is also on submit
                                             setFormData({ ...formData, available_tokens: newAvailable });
                                         }}
-                                        className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#009B9E] focus:border-transparent ${
-                                            formData.available_tokens && formData.total_tokens &&
-                                            parseInt(formData.available_tokens) > parseInt(formData.total_tokens)
-                                                ? 'border-red-300 bg-red-50' 
+                                        className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#009B9E] focus:border-transparent ${formData.available_tokens && formData.total_tokens &&
+                                                parseInt(formData.available_tokens) > parseInt(formData.total_tokens)
+                                                ? 'border-red-300 bg-red-50'
                                                 : 'border-slate-300'
-                                        }`}
+                                            }`}
                                         placeholder={formData.total_tokens || "10000"}
                                         max={formData.total_tokens || undefined}
                                     />
                                     {formData.available_tokens && formData.total_tokens &&
                                         parseInt(formData.available_tokens) > parseInt(formData.total_tokens) && (
-                                        <p className="text-xs text-red-500 mt-1">Cannot exceed total tokens</p>
-                                    )}
+                                            <p className="text-xs text-red-500 mt-1">Cannot exceed total tokens</p>
+                                        )}
                                 </div>
                                 <div>
                                     <label className="block text-sm font-bold text-slate-700 mb-2">
@@ -533,9 +526,8 @@ export default function Properties() {
                                         {images.map((img, index) => (
                                             <div
                                                 key={index}
-                                                className={`relative group border-2 rounded-lg overflow-hidden ${
-                                                    img.isMain ? 'border-[#009B9E] ring-2 ring-[#009B9E]/20' : 'border-slate-200'
-                                                }`}
+                                                className={`relative group border-2 rounded-lg overflow-hidden ${img.isMain ? 'border-[#009B9E] ring-2 ring-[#009B9E]/20' : 'border-slate-200'
+                                                    }`}
                                             >
                                                 <img
                                                     src={img.url}
@@ -549,11 +541,10 @@ export default function Properties() {
                                                     <button
                                                         type="button"
                                                         onClick={() => handleSetMainImage(index)}
-                                                        className={`p-2 rounded-lg ${
-                                                            img.isMain
+                                                        className={`p-2 rounded-lg ${img.isMain
                                                                 ? 'bg-[#009B9E] text-white'
                                                                 : 'bg-white/90 text-slate-700 hover:bg-white'
-                                                        }`}
+                                                            }`}
                                                         title={img.isMain ? 'Main Image' : 'Set as Main'}
                                                     >
                                                         <Star size={16} fill={img.isMain ? 'currentColor' : 'none'} />

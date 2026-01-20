@@ -13,7 +13,10 @@ import {
     RefreshCw,
     ChevronDown,
     Settings,
-    LayoutDashboard
+    LayoutDashboard,
+    Wallet,
+    Globe,
+    LogIn
 } from 'lucide-react';
 import { useState, useEffect, useContext } from 'react';
 import DepositModal from './DepositModal';
@@ -34,8 +37,10 @@ export default function Navbar() {
 
     // Dropdown durumu
     const [accountOpen, setAccountOpen] = useState(false);
+    // Dil menüsü durumu
+    const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
 
-    // Admin Kontrolü (Role veya ID'ye göre)
+    // Admin Kontrolü
     const isAdmin = user && ((user as any).role === 'admin' || (user as any).is_admin === 1);
 
     useEffect(() => {
@@ -87,6 +92,9 @@ export default function Navbar() {
         return `/${targetLang}${suffix || '/'}`;
     };
 
+    // 💰 BAKİYE HESAPLAMA (Cent -> Dolar)
+    const displayBalance = user && (user as any).usd_balance ? (user as any).usd_balance / 100 : 0;
+
     return (
         <>
             <nav className="bg-[#0F172A] text-white py-4 border-b border-white/10 sticky top-0 z-40 backdrop-blur-md bg-opacity-95 shadow-lg">
@@ -94,15 +102,12 @@ export default function Navbar() {
 
                     {/* LOGO */}
                     <Link to={getLink('/')} className="text-2xl font-black tracking-tight flex items-center gap-2 group shrink-0">
-                        <Link to={getLink('/')} className="text-2xl font-black tracking-tight flex items-center gap-2 group shrink-0">
-                            <img
-                                src="/logo.svg"
-                                alt="TerraVest Logo"
-                                className="h-10 w-auto group-hover:scale-105 transition-transform duration-200"
-                            />
-
-
-                        </Link>                        <span>Terra<span className="text-[#009B9E]">Vest</span></span>
+                        <img
+                            src="/logo.svg"
+                            alt="TerraVest Logo"
+                            className="h-10 w-auto group-hover:scale-105 transition-transform duration-200"
+                        />
+                        <span>Terra<span className="text-[#009B9E]">Vest</span></span>
                     </Link>
 
                     {/* DESKTOP MENU */}
@@ -191,7 +196,8 @@ export default function Navbar() {
                                             <span className="text-[10px] text-slate-400 font-bold uppercase">{t.navbar.balance}</span>
                                             <div className="flex items-center gap-1.5">
                                                 <span className="font-bold text-sm text-[#009B9E] tracking-wide">
-                                                    {formatCurrency((user as any).usd_balance || 0, lang)}
+                                                    {/* DÜZELTME: displayBalance değişkenini kullan */}
+                                                    {formatCurrency(displayBalance, lang)}
                                                 </span>
                                                 <button
                                                     onClick={handleManualRefresh}
@@ -263,7 +269,8 @@ export default function Navbar() {
                                     <div>
                                         <p className="text-xs text-slate-400 font-bold uppercase">{t.navbar.walletBalance}</p>
                                         <p className="text-2xl font-bold text-[#009B9E]">
-                                            {formatCurrency((user as any).usd_balance || 0, lang)}
+                                            {/* DÜZELTME: displayBalance değişkenini kullan */}
+                                            {formatCurrency(displayBalance, lang)}
                                         </p>
                                     </div>
                                     <button

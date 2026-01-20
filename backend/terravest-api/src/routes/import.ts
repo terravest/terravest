@@ -30,35 +30,48 @@ export async function handleImport(request: Request, env: Env): Promise<Response
         }
 
         // ============================================================
-        // 💰 TOKEN EKONOMİSİ & SATIŞ SİMÜLASYONU
+        // 💰 AKILLI TOKEN FİYATLANDIRMA ALGORİTMASI
         // ============================================================
 
-        // 1. Fiyatı Cent'e çevir
+        // 1. Fiyatı Cent'e çevir (Tam Sayı)
         const priceInCents = Math.round(price * 100);
 
-        // 2. Token Fiyatını Belirle ($50 - $100 arası)
-        let tokenPriceCents = 5000; // Varsayılan $50.00
-        if (priceInCents % 10000 === 0) {
-            tokenPriceCents = 10000; // $100.00
-        } else if (priceInCents % 5000 === 0) {
-            tokenPriceCents = 5000;  // $50.00
+        // 2. Evin Değerine Göre Token Fiyatı Seç (Variety)
+        let targetTokenPrice = 5000; // Varsayılan $50.00
+
+        if (price < 300000) {
+            // Ucuz evler ($300k altı) -> $25.00 Token
+            targetTokenPrice = 2500;
+        } else if (price > 800000) {
+            // Lüks evler ($800k üstü) -> $100.00 Token
+            targetTokenPrice = 10000;
+        } else {
+            // Orta segment -> $50.00 Token
+            targetTokenPrice = 5000;
         }
 
-        const totalTokens = Math.floor(priceInCents / tokenPriceCents);
+        // Biraz rastgelelik ekle (Hepsi aynı olmasın)
+        // %30 ihtimalle standart dışı fiyat ata
+        const rand = Math.random();
+        if (rand > 0.8) targetTokenPrice = 10000; // Bazen $100
+        else if (rand > 0.9) targetTokenPrice = 2000;  // Nadiren $20
 
-        // 3. ✨ YENİ: Satılmış Gösterme Mantığı (%20 - %40 arası satılmış olsun)
-        // Math.random() 0.0 ile 1.0 arası sayı üretir.
-        // Formül: 0.20 + (0.0~0.20) = 0.20 ile 0.40 arası
-        const soldPercentage = 0.20 + (Math.random() * 0.20);
+        // 3. Toplam Token Sayısını Hesapla (Tam Sayı olmak zorunda)
+        const totalTokens = Math.floor(priceInCents / targetTokenPrice);
+
+        // 4. Token Fiyatını Geri Hesapla (Kuruş hatası olmaması için)
+        // Örn: Ev $350,050 ise ve 7000 token varsa, fiyat $50.007 olamaz.
+        // Bu yüzden token fiyatını, toplam fiyata tam oturacak şekilde revize ediyoruz.
+        const finalTokenPrice = Math.floor(priceInCents / totalTokens);
+
+        // 5. Satış Simülasyonu (%15 - %45 arası satılmış gibi göster)
+        const soldPercentage = 0.15 + (Math.random() * 0.30);
         const soldTokens = Math.floor(totalTokens * soldPercentage);
-
-        // Kalan tokenları hesapla
         const availableTokens = totalTokens - soldTokens;
-
 
         const mainImageUrl = (images && images.length > 0) ? images[0] : null;
 
-        // INSERT (available_tokens artık total_tokens ile aynı değil)
+        // INSERT
         const result = await env.terravest_db.prepare(`
             INSERT INTO properties (
                 title, description, location, price_usd, 
@@ -70,9 +83,9 @@ export async function handleImport(request: Request, env: Env): Promise<Response
             description || `Imported Property: ${bed}bd, ${bath}ba, ${sqft} sqft`,
             location,
             priceInCents,
-            tokenPriceCents,
+            finalTokenPrice, // Hesaplanan Nihai Token Fiyatı (Cent)
             totalTokens,
-            availableTokens, // <-- Hesaplanan miktar (%60-%80 arası)
+            availableTokens,
             rental_yield || "N/A",
             mainImageUrl
         ).run();

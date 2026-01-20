@@ -2,15 +2,17 @@ import { Env } from "../index";
 import { requireAuth } from "../lib/auth";
 import { json, errorResponse } from "../lib/errors";
 import { accrueRewardsForUser } from "../lib/rewards";
+import { getErrorMessage, getLangFromRequest } from "../lib/i18n";
 
 export async function handleClaim(request: Request, env: Env): Promise<Response> {
     // 1. Auth Check
     const auth = await requireAuth(request, env);
     if (auth instanceof Response) return auth;
     const user = auth.user;
+    const lang = getLangFromRequest(request);
 
     if (request.method !== "POST") {
-        return errorResponse("Method not allowed", 405);
+        return errorResponse(getErrorMessage(lang, 'METHOD_NOT_ALLOWED'), 405);
     }
 
     try {
@@ -31,10 +33,7 @@ export async function handleClaim(request: Request, env: Env): Promise<Response>
         // Threshold check: Prevent claiming insignificant amounts (e.g., less than 1 cent)
         const MINIMUM_CLAIM_THRESHOLD = 0.01;
         if (totalClaimable < MINIMUM_CLAIM_THRESHOLD) {
-            return errorResponse(
-                `No significant rewards to claim yet. Current unclaimed rewards: $${totalClaimable.toFixed(4)}, minimum required: $${MINIMUM_CLAIM_THRESHOLD.toFixed(2)}.`,
-                400
-            );
+            return errorResponse(getErrorMessage(lang, 'CLAIM_NOT_AVAILABLE'), 400);
         }
 
         // 4. ATOMIC TRANSACTION (Batch Execution)

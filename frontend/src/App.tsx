@@ -13,6 +13,8 @@ import AdminRoute from './components/AdminRoute';
 const Home = lazy(() => import('./pages/Home'));
 const Login = lazy(() => import('./pages/Login'));
 const Register = lazy(() => import('./pages/Register'));
+const VerifyEmail = lazy(() => import('./pages/VerifyEmail'));
+const VerifyEmailPending = lazy(() => import('./pages/VerifyEmailPending'));
 const Settings = lazy(() => import('./pages/Settings'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Marketplace = lazy(() => import('./pages/Marketplace'));
@@ -52,6 +54,8 @@ export function AppRoutes({ lang }: AppRoutesProps) {
           <Route index element={<Home />} />
           <Route path="login" element={<Login />} />
           <Route path="register" element={<Register />} />
+          <Route path="verify-email" element={<VerifyEmail />} />
+          <Route path="verify-email-pending" element={<VerifyEmailPending />} />
 
           <Route path="about" element={<About />} />
           <Route path="learn" element={<Learn />} />

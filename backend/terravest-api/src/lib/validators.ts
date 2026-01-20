@@ -8,7 +8,7 @@ export const RegisterSchema = z.object({
         .min(3, { message: "Username must be at least 3 characters" })
         .max(20, { message: "Username must be at most 20 characters" })
         .regex(USERNAME_REGEX, { message: "Username must contain only letters, numbers, and underscores" }),
-    password: z.string().min(6, { message: "Password must be at least 6 characters" })
+    password: z.string().min(8, { message: "Password must be at least 8 characters" })
 });
 
 // --- LOGIN SCHEMA ---
@@ -35,5 +35,5 @@ export const ResetPasswordSchema = z.object({
 // --- BUY ORDER SCHEMA ---
 export const BuySchema = z.object({
     propertyId: z.number().int().positive(),
-    tokenAmount: z.number().positive()
+    tokenAmount: z.number().int().positive()
 });

@@ -30,42 +30,36 @@ export async function handleImport(request: Request, env: Env): Promise<Response
         }
 
         // ============================================================
-        // 💰 AKILLI TOKEN FİYATLANDIRMA ALGORİTMASI
+        // 💰 KÜSÜRATLI TOKEN FİYATLANDIRMA ($50 - $100 Arası)
         // ============================================================
 
-        // 1. Fiyatı Cent'e çevir (Tam Sayı)
+        // 1. Fiyatı Cent'e çevir (Örn: $350,000 -> 35,000,000 Cent)
         const priceInCents = Math.round(price * 100);
 
-        // 2. Evin Değerine Göre Token Fiyatı Seç (Variety)
-        let targetTokenPrice = 5000; // Varsayılan $50.00
+        // 2. Token Başına İstenen Fiyat Aralığı (Cent)
+        const minTargetPrice = 5000;  // $50.00
+        const maxTargetPrice = 10000; // $100.00
 
-        if (price < 300000) {
-            // Ucuz evler ($300k altı) -> $25.00 Token
-            targetTokenPrice = 2500;
-        } else if (price > 800000) {
-            // Lüks evler ($800k üstü) -> $100.00 Token
-            targetTokenPrice = 10000;
-        } else {
-            // Orta segment -> $50.00 Token
-            targetTokenPrice = 5000;
-        }
+        // 3. Olası En Az ve En Çok Token Sayısını Hesapla
+        // (Toplam Fiyat / $100) = En Az Token Sayısı
+        // (Toplam Fiyat / $50) = En Çok Token Sayısı
+        const minTokens = Math.ceil(priceInCents / maxTargetPrice);
+        const maxTokens = Math.floor(priceInCents / minTargetPrice);
 
-        // Biraz rastgelelik ekle (Hepsi aynı olmasın)
-        // %30 ihtimalle standart dışı fiyat ata
-        const rand = Math.random();
-        if (rand > 0.8) targetTokenPrice = 10000; // Bazen $100
-        else if (rand > 0.9) targetTokenPrice = 2000;  // Nadiren $20
+        // 4. Bu aralıkta RASTGELE bir Token Sayısı seç
+        // Örn: 3500 ile 7000 arasında rastgele bir sayı -> 5432
+        let totalTokens = Math.floor(Math.random() * (maxTokens - minTokens + 1)) + minTokens;
 
-        // 3. Toplam Token Sayısını Hesapla (Tam Sayı olmak zorunda)
-        const totalTokens = Math.floor(priceInCents / targetTokenPrice);
+        // Güvenlik: Eğer ev çok ucuzsa token sayısı 0 olmasın
+        if (totalTokens < 10) totalTokens = 10;
 
-        // 4. Token Fiyatını Geri Hesapla (Kuruş hatası olmaması için)
-        // Örn: Ev $350,050 ise ve 7000 token varsa, fiyat $50.007 olamaz.
-        // Bu yüzden token fiyatını, toplam fiyata tam oturacak şekilde revize ediyoruz.
+        // 5. Nihai Token Fiyatını Geri Hesapla
+        // 35,000,000 / 5432 = 6443.3 Cent -> $64.43
+        // Bu işlem sonucunda fiyatın "düz" ($50.00) çıkma ihtimali neredeyse imkansızdır.
         const finalTokenPrice = Math.floor(priceInCents / totalTokens);
 
-        // 5. Satış Simülasyonu (%15 - %45 arası satılmış gibi göster)
-        const soldPercentage = 0.15 + (Math.random() * 0.30);
+        // 6. Satış Simülasyonu (%20 - %60 arası satılmış göster)
+        const soldPercentage = 0.20 + (Math.random() * 0.40);
         const soldTokens = Math.floor(totalTokens * soldPercentage);
         const availableTokens = totalTokens - soldTokens;
 
@@ -83,7 +77,7 @@ export async function handleImport(request: Request, env: Env): Promise<Response
             description || `Imported Property: ${bed}bd, ${bath}ba, ${sqft} sqft`,
             location,
             priceInCents,
-            finalTokenPrice, // Hesaplanan Nihai Token Fiyatı (Cent)
+            finalTokenPrice, // Hesaplanan Küsüratlı Fiyat
             totalTokens,
             availableTokens,
             rental_yield || "N/A",

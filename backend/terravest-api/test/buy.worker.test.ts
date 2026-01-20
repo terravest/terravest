@@ -16,11 +16,14 @@ vi.mock('../src/lib/bitcoin', () => {
 import worker from '../src/index';
 import { applySchema } from './utils';
 
+let ipCounter = 1;
+const nextIp = () => `203.0.113.${ipCounter++}`;
+
 async function createTestUser(email: string, username: string, balance: number) {
 	const hashedPassword = await bcrypt.hash('password123', 10);
 	await env.terravest_db
-		.prepare(`INSERT INTO users (email, username, password, role, usd_balance) VALUES (?, ?, ?, ?, ?)`)
-		.bind(email, username, hashedPassword, 'user', balance)
+		.prepare(`INSERT INTO users (email, username, password, role, usd_balance, email_verified) VALUES (?, ?, ?, ?, ?, ?)`)
+		.bind(email, username, hashedPassword, 'user', balance, 1)
 		.run();
 }
 
@@ -35,10 +38,15 @@ async function loginUser(identifier: string) {
 	const res = await worker.fetch(
 		new Request('http://localhost/api/auth/login', {
 			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
+			headers: {
+				'Content-Type': 'application/json',
+				'CF-Connecting-IP': nextIp(),
+			},
 			body: JSON.stringify({
 				identifier,
+				identifierType: identifier.includes('@') ? 'email' : 'username',
 				password: 'password123',
+					turnstileToken: 'test-token',
 			}),
 		}),
 		env,
@@ -174,7 +182,35 @@ describe('Buy API (Worker Environment)', () => {
 
 		expect(res.status).toBe(400);
 		const data = await res.json() as any;
-		expect(data.error).toBe('Insufficient balance');
+		expect(data.error).toBe('Insufficient balance.');
+	});
+
+	it('❌ should return localized error message (pt-BR)', async () => {
+		await createTestUser('poor-pt@test.com', 'poorpt', 10);
+		await createTestProperty('Villa', 50, 100);
+
+		const token = await loginUser('poor-pt@test.com');
+
+		const res = await worker.fetch(
+			new Request('http://localhost/api/buy', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${token}`,
+				},
+				body: JSON.stringify({
+					propertyId: 1,
+					tokenAmount: 1,
+					lang: 'pt-BR',
+				}),
+			}),
+			env,
+			createExecutionContext()
+		);
+
+		expect(res.status).toBe(400);
+		const data = await res.json() as any;
+		expect(data.error).toBe('Saldo insuficiente.');
 	});
 
 	it('❌ should reject invalid property ID', async () => {
@@ -199,7 +235,7 @@ describe('Buy API (Worker Environment)', () => {
 
 		expect(res.status).toBe(404);
 		const data = await res.json() as any;
-		expect(data.error).toBe('Property not found');
+		expect(data.error).toBe('Property not found.');
 	});
 
 	it('❌ should reject invalid input (missing propertyId)', async () => {
@@ -271,5 +307,81 @@ describe('Buy API (Worker Environment)', () => {
 		);
 
 		expect(res.status).toBe(400);
+	});
+
+	it('✅ should enforce CHECK constraints (no negative balances)', async () => {
+		await createTestUser('check@test.com', 'checkuser', 0);
+		await createTestProperty('Villa', 50, 100);
+
+		let errorCaught = false;
+		try {
+			await env.terravest_db.prepare(`UPDATE users SET usd_balance = -1 WHERE email = ?`).bind('check@test.com').run();
+		} catch {
+			errorCaught = true;
+		}
+		const userAfter = await env.terravest_db
+			.prepare(`SELECT usd_balance FROM users WHERE email = ?`)
+			.bind('check@test.com')
+			.first() as any;
+		expect(userAfter.usd_balance).toBeGreaterThanOrEqual(0);
+		expect(errorCaught).toBe(true);
+
+		errorCaught = false;
+		try {
+			await env.terravest_db.prepare(`UPDATE properties SET available_tokens = -1 WHERE id = 1`).run();
+		} catch {
+			errorCaught = true;
+		}
+		const propertyAfter = await env.terravest_db
+			.prepare(`SELECT available_tokens FROM properties WHERE id = 1`)
+			.first() as any;
+		expect(propertyAfter.available_tokens).toBeGreaterThanOrEqual(0);
+		expect(errorCaught).toBe(true);
+	});
+
+	it('✅ should rollback batch if investment insert fails', async () => {
+		await createTestUser('rollback@test.com', 'rollback', 1000);
+		await createTestProperty('Villa', 50, 10);
+
+		await env.terravest_db
+			.prepare("CREATE TRIGGER IF NOT EXISTS fail_investments BEFORE INSERT ON investments FOR EACH ROW BEGIN SELECT RAISE(FAIL, 'forced failure'); END;")
+			.run();
+
+		const token = await loginUser('rollback@test.com');
+		const res = await worker.fetch(
+			new Request('http://localhost/api/buy', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${token}`,
+				},
+				body: JSON.stringify({
+					propertyId: 1,
+					tokenAmount: 2,
+				}),
+			}),
+			env,
+			createExecutionContext()
+		);
+
+		expect(res.status).toBe(500);
+
+		const user = await env.terravest_db
+			.prepare(`SELECT usd_balance FROM users WHERE email = ?`)
+			.bind('rollback@test.com')
+			.first() as any;
+		expect(user.usd_balance).toBe(1000);
+
+		const property = await env.terravest_db
+			.prepare(`SELECT available_tokens FROM properties WHERE id = 1`)
+			.first() as any;
+		expect(property.available_tokens).toBe(10);
+
+		const investments = await env.terravest_db
+			.prepare(`SELECT COUNT(*) as count FROM investments WHERE user_id = 1`)
+			.first() as any;
+		expect(investments.count).toBe(0);
+
+		await env.terravest_db.exec(`DROP TRIGGER IF EXISTS fail_investments`);
 	});
 });

@@ -36,6 +36,10 @@ export const api = {
     register: (data: any) => request("/auth/register", { method: "POST", body: JSON.stringify(data) }),
     login: (data: any) => request("/auth/login", { method: "POST", body: JSON.stringify(data) }),
     getMe: () => request("/auth/me", { method: "GET" }),
+    verifyEmail: (data: { token: string; lang?: string }) =>
+        request("/auth/verify-email", { method: "POST", body: JSON.stringify(data) }),
+    resendVerificationEmail: (data: { email: string; lang?: string }) =>
+        request("/auth/resend-verification", { method: "POST", body: JSON.stringify(data) }),
 
     // Fix: Backend usually requires both old and new password, so we accept 'data' object.
     changePassword: (data: any) =>

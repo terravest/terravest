@@ -1,5 +1,6 @@
 import { Buffer } from 'node:buffer';
 import { EventEmitter } from 'node:events';
+import { env } from 'cloudflare:test';
 
 // Buffer'ı global yap
 globalThis.Buffer = Buffer;
@@ -17,4 +18,12 @@ if (typeof globalThis.process === 'undefined') {
 // EventEmitter'ı global yap
 if (typeof globalThis.EventEmitter === 'undefined') {
     (globalThis as any).EventEmitter = EventEmitter;
+}
+
+// Test bindings defaults
+if (!env.JWT_SECRET) {
+    env.JWT_SECRET = 'test-secret';
+}
+if (!env.TURNSTILE_SECRET) {
+    env.TURNSTILE_SECRET = '';
 }

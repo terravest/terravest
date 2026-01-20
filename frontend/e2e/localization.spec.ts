@@ -14,7 +14,7 @@ const mockUser: MockUser = {
   id: 1,
   email: 'test@example.com',
   username: 'testuser',
-  usd_balance: 1234.56,
+  usd_balance: 123456,
   role: 'user',
 };
 

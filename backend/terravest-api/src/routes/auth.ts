@@ -3,9 +3,13 @@ import jwt from "@tsndr/cloudflare-worker-jwt";
 import bcrypt from "bcryptjs";
 import { RegisterSchema, LoginSchema, ForgotPasswordSchema, ResetPasswordSchema } from "../lib/validators";
 import { requireAuth } from "../lib/auth";
-import { json, validationError, errorResponse } from "../lib/errors";
+import { json, errorResponse } from "../lib/errors";
 import { isReservedUsername, USERNAME_REGEX } from "../lib/reserved";
 import { generateResetToken, hashResetToken, compareResetToken, getResetTokenExpiration } from "../lib/password-reset";
+import { compareVerificationToken, generateVerificationToken, getVerificationTokenExpiration, hashVerificationToken } from "../lib/email-verification";
+import { sendEmailVerificationPlaceholder } from "../lib/email-sender";
+import { getErrorMessage, getLangFromRequest, getSuccessMessage, type Lang } from "../lib/i18n";
+import type { ZodError } from "zod";
 
 
 async function verifyTurnstile(token: string, secretKey: string, ip: string) {
@@ -24,17 +28,61 @@ async function verifyTurnstile(token: string, secretKey: string, ip: string) {
     return outcome.success;
 }
 
+function getValidationMessage(lang: Lang, zodError: ZodError): string {
+    const issue = zodError.issues[0];
+    const field = issue?.path?.[0];
+
+    switch (field) {
+        case 'email':
+            return getErrorMessage(lang, 'INVALID_EMAIL_FORMAT');
+        case 'username':
+            return getErrorMessage(lang, 'INVALID_USERNAME_FORMAT');
+        case 'password':
+        case 'newPassword':
+            return getErrorMessage(lang, 'PASSWORD_TOO_SHORT');
+        case 'identifier':
+            return getErrorMessage(lang, 'IDENTIFIER_REQUIRED');
+        case 'turnstileToken':
+            return getErrorMessage(lang, 'BOT_VERIFICATION_FAILED');
+        case 'token':
+            return getErrorMessage(lang, 'RESET_TOKEN_INVALID');
+        default:
+            return getErrorMessage(lang, 'VALIDATION_FAILED');
+    }
+}
+
+function getFrontendLangPath(lang: Lang): string {
+    if (lang === 'es-419') return 'es';
+    if (lang === 'pt-BR') return 'pt-br';
+    if (lang === 'fr') return 'fr';
+    return '';
+}
+
+function buildVerificationUrl(baseUrl: string, token: string, lang: Lang): string {
+    const sanitizedBase = baseUrl.replace(/\/$/, '');
+    const langPath = getFrontendLangPath(lang);
+    const prefix = langPath ? `/${langPath}` : '';
+    return `${sanitizedBase}${prefix}/verify-email?token=${encodeURIComponent(token)}`;
+}
+
 /* =========================
    REGISTER
 ========================= */
 export const handleRegister = async (request: Request, env: Env) => {
     try {
-        const body = await request.json();
+        let body: any;
+        try {
+            body = await request.json();
+        } catch {
+            const lang = getLangFromRequest(request);
+            return errorResponse(getErrorMessage(lang, 'INVALID_JSON'), 400);
+        }
+        const lang = getLangFromRequest(request, body);
 
         // 1. Validation (Zod schema)
         const validation = RegisterSchema.safeParse(body);
         if (!validation.success) {
-            return validationError(validation.error);
+            return errorResponse(getValidationMessage(lang, validation.error), 400);
         }
 
         const { email, password, username } = validation.data;
@@ -45,72 +93,73 @@ export const handleRegister = async (request: Request, env: Env) => {
 
         // 3. Validate username format (redundant but safe)
         if (!USERNAME_REGEX.test(username)) {
-            return errorResponse("Invalid username format", 400);
+            return errorResponse(getErrorMessage(lang, 'INVALID_USERNAME_FORMAT'), 400);
         }
 
         // 4. Check if reserved (case-insensitive)
         if (isReservedUsername(normalizedUsername)) {
-            return errorResponse("Username is reserved", 400);
+            return errorResponse(getErrorMessage(lang, 'USERNAME_RESERVED'), 400);
         }
 
         // 5. Validate email format (redundant but safe)
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
-            return errorResponse("Invalid email format", 400);
+            return errorResponse(getErrorMessage(lang, 'INVALID_EMAIL_FORMAT'), 400);
         }
 
         // 6. Hashing
         const hashedPassword = await bcrypt.hash(password, 10);
+        const verificationToken = generateVerificationToken();
+        const verificationTokenHash = await hashVerificationToken(verificationToken);
+        const verificationExpiresAt = getVerificationTokenExpiration();
 
         // 7. Attempt database insert (UNIQUE constraints are the final authority)
         try {
             const result = await env.terravest_db
-                .prepare('INSERT INTO users (email, username, password, role) VALUES (?, ?, ?, ?)')
+                .prepare('INSERT INTO users (email, username, password, role, email_verified, email_verified_at) VALUES (?, ?, ?, ?, 0, NULL)')
                 .bind(normalizedEmail, normalizedUsername, hashedPassword, 'user')
                 .run();
 
             if (!result.success) {
-                return errorResponse("Failed to register user", 500);
+                return errorResponse(getErrorMessage(lang, 'REGISTER_FAILED'), 500);
             }
 
             const newUserId = result.meta.last_row_id;
 
-            // Generate token (24 hours - "Remember Me" defaults to false after registration)
-            const token = await jwt.sign({
-                id: newUserId,
-                email: normalizedEmail,
-                username: normalizedUsername,
-                role: 'user',
-                exp: Math.floor(Date.now() / 1000) + 24 * 60 * 60 // 24 Hours
-            }, env.JWT_SECRET);
+            await env.terravest_db
+                .prepare('UPDATE email_verification_tokens SET used = 1 WHERE user_id = ? AND used = 0')
+                .bind(newUserId)
+                .run();
 
-            // Return Token as response
+            await env.terravest_db
+                .prepare('INSERT INTO email_verification_tokens (user_id, token_hash, expires_at, used) VALUES (?, ?, ?, 0)')
+                .bind(newUserId, verificationTokenHash, verificationExpiresAt)
+                .run();
+
+            const frontendUrl = env.FRONTEND_URL || 'https://terravest-frontend.pages.dev';
+            const verificationUrl = buildVerificationUrl(frontendUrl, verificationToken, lang);
+            sendEmailVerificationPlaceholder(normalizedEmail, verificationUrl, lang);
+
             return json({
                 success: true,
-                token,
-                user: {
-                    id: newUserId,
-                    email: normalizedEmail,
-                    username: normalizedUsername,
-                    role: 'user',
-                    usd_balance: 0
-                }
+                requiresVerification: true,
+                message: getSuccessMessage(lang, 'EMAIL_VERIFICATION_SENT')
             }, 201);
 
         } catch (dbError: any) {
             // Handle UNIQUE constraint violations
             const errorMessage = dbError.message || '';
-            
+
             // Check for username conflict
             if (errorMessage.includes('username') || errorMessage.includes('idx_users_username_unique')) {
-                return errorResponse("Username already taken", 409);
+                return errorResponse(getErrorMessage(lang, 'USERNAME_TAKEN'), 409);
             }
-            
+
             // Check for email conflict
             if (errorMessage.includes('email') || errorMessage.includes('idx_users_email_unique')) {
-                return errorResponse("Email already registered", 409);
+                return errorResponse(getErrorMessage(lang, 'EMAIL_TAKEN'), 409);
             }
-            
+
             // Re-throw if it's not a constraint violation
             throw dbError;
         }
@@ -126,22 +175,29 @@ export const handleRegister = async (request: Request, env: Env) => {
 ========================= */
 export async function handleLogin(request: Request, env: Env): Promise<Response> {
     try {
-        const body = await request.json() as any;
+        let body: any;
+        try {
+            body = await request.json();
+        } catch {
+            const lang = getLangFromRequest(request);
+            return errorResponse(getErrorMessage(lang, 'INVALID_JSON'), 400);
+        }
+        const lang = getLangFromRequest(request, body);
 
         // ---------------------------------------------------------
-        // 🛡️ SECURITY STEP: TURNSTILE CHECK (MANDATORY)
+        // SECURITY STEP: TURNSTILE CHECK (MANDATORY)
         // ---------------------------------------------------------
         const turnstileToken = body.turnstileToken;
         const ip = request.headers.get('CF-Connecting-IP') || "";
 
         if (!turnstileToken) {
-            return json({ error: "BOT_VERIFICATION_FAILED" }, 400);
+            return errorResponse(getErrorMessage(lang, 'BOT_VERIFICATION_FAILED'), 400);
         }
 
         if (env.TURNSTILE_SECRET) {
             const isHuman = await verifyTurnstile(turnstileToken, env.TURNSTILE_SECRET, ip);
             if (!isHuman) {
-                return json({ error: "BOT_VERIFICATION_FAILED" }, 403);
+                return errorResponse(getErrorMessage(lang, 'BOT_VERIFICATION_FAILED'), 403);
             }
         } else {
             console.warn("⚠️ TURNSTILE_SECRET not set. Skipping bot check.");
@@ -151,7 +207,7 @@ export async function handleLogin(request: Request, env: Env): Promise<Response>
         // Validation
         const validation = LoginSchema.safeParse(body);
         if (!validation.success) {
-            return validationError(validation.error);
+            return errorResponse(getValidationMessage(lang, validation.error), 400);
         }
 
         const { identifier, password, identifierType, rememberMe } = validation.data;
@@ -163,12 +219,12 @@ export async function handleLogin(request: Request, env: Env): Promise<Response>
         let user: any;
         if (identifierType === "email") {
             user = await env.terravest_db
-                .prepare('SELECT id, email, username, password, role FROM users WHERE LOWER(email) = ?')
+                .prepare('SELECT id, email, username, password, role, email_verified FROM users WHERE LOWER(email) = ?')
                 .bind(normalizedIdentifier)
                 .first();
         } else {
             user = await env.terravest_db
-                .prepare('SELECT id, email, username, password, role FROM users WHERE LOWER(username) = ?')
+                .prepare('SELECT id, email, username, password, role, email_verified FROM users WHERE LOWER(username) = ?')
                 .bind(normalizedIdentifier)
                 .first();
         }
@@ -179,7 +235,11 @@ export async function handleLogin(request: Request, env: Env): Promise<Response>
         if (!user || !isPasswordValid) {
             // Log failed attempt for monitoring
             console.warn(`Failed login attempt: identifier=${normalizedIdentifier}, type=${identifierType}, ip=${ip}`);
-            return json({ error: "INVALID_CREDENTIALS" }, 401);
+            return errorResponse(getErrorMessage(lang, 'INVALID_CREDENTIALS'), 401);
+        }
+
+        if (Number(user.email_verified) !== 1) {
+            return json({ error: "EMAIL_NOT_VERIFIED", message: getErrorMessage(lang, 'EMAIL_NOT_VERIFIED') }, 403);
         }
 
         // ---------------------------------------------------------
@@ -211,7 +271,124 @@ export async function handleLogin(request: Request, env: Env): Promise<Response>
 
     } catch (e: any) {
         console.error("Login error:", e);
-        return json({ error: e.message || "Internal server error" }, 500);
+        return errorResponse(e.message || "Internal server error", 500);
+    }
+}
+
+/* =========================
+   VERIFY EMAIL
+========================= */
+export async function handleVerifyEmail(request: Request, env: Env): Promise<Response> {
+    try {
+        let body: any;
+        try {
+            body = await request.json();
+        } catch {
+            const lang = getLangFromRequest(request);
+            return errorResponse(getErrorMessage(lang, 'INVALID_JSON'), 400);
+        }
+        const lang = getLangFromRequest(request, body);
+        const token = body?.token;
+
+        if (!token || typeof token !== 'string') {
+            return errorResponse(getErrorMessage(lang, 'EMAIL_VERIFICATION_INVALID'), 400);
+        }
+
+        const db = env.terravest_db;
+
+        await db.prepare("DELETE FROM email_verification_tokens WHERE expires_at < datetime('now') OR used = 1").run();
+
+        const tokens = await db.prepare(`
+            SELECT id, user_id, token_hash
+            FROM email_verification_tokens
+            WHERE used = 0 AND expires_at > datetime('now')
+        `).all();
+
+        let matched: { id: number; user_id: number } | null = null;
+        for (const row of tokens.results || []) {
+            const tokenRow = row as any;
+            const matches = await compareVerificationToken(token, tokenRow.token_hash);
+            if (matches) {
+                matched = { id: tokenRow.id, user_id: tokenRow.user_id };
+                break;
+            }
+        }
+
+        if (!matched) {
+            return errorResponse(getErrorMessage(lang, 'EMAIL_VERIFICATION_INVALID'), 400);
+        }
+
+        await db.batch([
+            db.prepare("UPDATE users SET email_verified = 1, email_verified_at = CURRENT_TIMESTAMP WHERE id = ?")
+                .bind(matched.user_id),
+            db.prepare("UPDATE email_verification_tokens SET used = 1 WHERE id = ?")
+                .bind(matched.id)
+        ]);
+
+        return json({
+            success: true,
+            message: getSuccessMessage(lang, 'EMAIL_VERIFICATION_SUCCESS')
+        });
+    } catch (e: any) {
+        console.error("Verify email error:", e);
+        return errorResponse(e.message || "Internal server error", 500);
+    }
+}
+
+/* =========================
+   RESEND VERIFICATION
+========================= */
+export async function handleResendVerification(request: Request, env: Env): Promise<Response> {
+    try {
+        let body: any;
+        try {
+            body = await request.json();
+        } catch {
+            const lang = getLangFromRequest(request);
+            return errorResponse(getErrorMessage(lang, 'INVALID_JSON'), 400);
+        }
+        const lang = getLangFromRequest(request, body);
+        const email = body?.email;
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!email || typeof email !== 'string' || !emailRegex.test(email)) {
+            return errorResponse(getErrorMessage(lang, 'INVALID_EMAIL_FORMAT'), 400);
+        }
+
+        const normalizedEmail = email.toLowerCase();
+        const db = env.terravest_db;
+
+        await db.prepare("DELETE FROM email_verification_tokens WHERE expires_at < datetime('now') OR used = 1").run();
+
+        const user = await db
+            .prepare('SELECT id, email_verified FROM users WHERE LOWER(email) = ?')
+            .bind(normalizedEmail)
+            .first();
+
+        if (!user || Number(user.email_verified) === 1) {
+            return json({ success: true, message: getSuccessMessage(lang, 'EMAIL_VERIFICATION_SENT') });
+        }
+
+        const verificationToken = generateVerificationToken();
+        const verificationTokenHash = await hashVerificationToken(verificationToken);
+        const verificationExpiresAt = getVerificationTokenExpiration();
+
+        await db.prepare('UPDATE email_verification_tokens SET used = 1 WHERE user_id = ? AND used = 0')
+            .bind(user.id)
+            .run();
+
+        await db.prepare('INSERT INTO email_verification_tokens (user_id, token_hash, expires_at, used) VALUES (?, ?, ?, 0)')
+            .bind(user.id, verificationTokenHash, verificationExpiresAt)
+            .run();
+
+        const frontendUrl = env.FRONTEND_URL || 'https://terravest-frontend.pages.dev';
+        const verificationUrl = buildVerificationUrl(frontendUrl, verificationToken, lang);
+        sendEmailVerificationPlaceholder(normalizedEmail, verificationUrl, lang);
+
+        return json({ success: true, message: getSuccessMessage(lang, 'EMAIL_VERIFICATION_SENT') });
+    } catch (e: any) {
+        console.error("Resend verification error:", e);
+        return errorResponse(e.message || "Internal server error", 500);
     }
 }
 
@@ -298,12 +475,19 @@ export async function handleCheckEmail(request: Request, env: Env): Promise<Resp
 ========================= */
 export async function handleForgotPassword(request: Request, env: Env): Promise<Response> {
     try {
-        const body = await request.json() as any;
+        let body: any;
+        try {
+            body = await request.json();
+        } catch {
+            const lang = getLangFromRequest(request);
+            return errorResponse(getErrorMessage(lang, 'INVALID_JSON'), 400);
+        }
+        const lang = getLangFromRequest(request, body);
 
         // Validate input
         const validation = ForgotPasswordSchema.safeParse(body);
         if (!validation.success) {
-            return validationError(validation.error);
+            return errorResponse(getValidationMessage(lang, validation.error), 400);
         }
 
         const { email, turnstileToken } = validation.data;
@@ -312,11 +496,11 @@ export async function handleForgotPassword(request: Request, env: Env): Promise<
         const ip = request.headers.get('CF-Connecting-IP') || "";
         if (env.TURNSTILE_SECRET) {
             if (!turnstileToken) {
-                return json({ error: "BOT_VERIFICATION_FAILED" }, 400);
+                return errorResponse(getErrorMessage(lang, 'BOT_VERIFICATION_FAILED'), 400);
             }
             const isHuman = await verifyTurnstile(turnstileToken, env.TURNSTILE_SECRET, ip);
             if (!isHuman) {
-                return json({ error: "BOT_VERIFICATION_FAILED" }, 403);
+                return errorResponse(getErrorMessage(lang, 'BOT_VERIFICATION_FAILED'), 403);
             }
         }
 
@@ -367,7 +551,7 @@ export async function handleForgotPassword(request: Request, env: Env): Promise<
         return json({ success: true });
     } catch (e: any) {
         console.error("Forgot password error:", e);
-        return json({ error: "Internal server error" }, 500);
+        return errorResponse("Internal server error", 500);
     }
 }
 
@@ -376,12 +560,19 @@ export async function handleForgotPassword(request: Request, env: Env): Promise<
 ========================= */
 export async function handleResetPassword(request: Request, env: Env): Promise<Response> {
     try {
-        const body = await request.json() as any;
+        let body: any;
+        try {
+            body = await request.json();
+        } catch {
+            const lang = getLangFromRequest(request);
+            return errorResponse(getErrorMessage(lang, 'INVALID_JSON'), 400);
+        }
+        const lang = getLangFromRequest(request, body);
 
         // Validate input
         const validation = ResetPasswordSchema.safeParse(body);
         if (!validation.success) {
-            return validationError(validation.error);
+            return errorResponse(getValidationMessage(lang, validation.error), 400);
         }
 
         const { token, newPassword } = validation.data;
@@ -408,7 +599,7 @@ export async function handleResetPassword(request: Request, env: Env): Promise<R
         }
 
         if (!validToken) {
-            return json({ error: "INVALID_OR_EXPIRED_TOKEN" }, 400);
+            return errorResponse(getErrorMessage(lang, 'RESET_TOKEN_INVALID'), 400);
         }
 
         // Hash new password
@@ -431,7 +622,7 @@ export async function handleResetPassword(request: Request, env: Env): Promise<R
         return json({ success: true });
     } catch (e: any) {
         console.error("Reset password error:", e);
-        return json({ error: "Internal server error" }, 500);
+        return errorResponse("Internal server error", 500);
     }
 }
 

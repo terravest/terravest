@@ -16,11 +16,14 @@ vi.mock('../src/lib/bitcoin', () => {
 import worker from '../src/index';
 import { applySchema } from './utils';
 
+let ipCounter = 1;
+const nextIp = () => `203.0.113.${ipCounter++}`;
+
 async function createTestUser(email: string, username: string, balance: number) {
 	const hashedPassword = await bcrypt.hash('password123', 10);
 	await env.terravest_db
-		.prepare(`INSERT INTO users (email, username, password, role, usd_balance) VALUES (?, ?, ?, ?, ?)`)
-		.bind(email, username, hashedPassword, 'user', balance)
+		.prepare(`INSERT INTO users (email, username, password, role, usd_balance, email_verified) VALUES (?, ?, ?, ?, ?, ?)`)
+		.bind(email, username, hashedPassword, 'user', balance, 1)
 		.run();
 }
 
@@ -35,10 +38,15 @@ async function loginUser(identifier: string) {
 	const res = await worker.fetch(
 		new Request('http://localhost/api/auth/login', {
 			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
+			headers: {
+				'Content-Type': 'application/json',
+				'CF-Connecting-IP': nextIp(),
+			},
 			body: JSON.stringify({
 				identifier,
+				identifierType: identifier.includes('@') ? 'email' : 'username',
 				password: 'password123',
+					turnstileToken: 'test-token',
 			}),
 		}),
 		env,
@@ -248,9 +256,11 @@ describe('Canary Test - Full Flow: Deposit → Buy → Claim → Sell', () => {
 		expect(sellData.amount_added).toBeGreaterThan(0);
 		expect(sellData.fee_deducted).toBeGreaterThan(0);
 
-		// Calculate expected net return: 5 tokens × $50 = $250, minus 1.5% fee = $246.25
-		const expectedNetReturn = 250 * 0.985; // 1.5% trading fee
-		expect(sellData.amount_added).toBeCloseTo(expectedNetReturn, 2);
+		// Calculate expected net return: 5 tokens × $50 = $250, fee is floored
+		const rawReturn = 250;
+		const feeCents = Math.floor(rawReturn * 0.015);
+		const expectedNetReturn = rawReturn - feeCents;
+		expect(sellData.amount_added).toBe(expectedNetReturn);
 
 		// Verify balance increased
 		user = await env.terravest_db

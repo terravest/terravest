@@ -16,11 +16,14 @@ vi.mock('../src/lib/bitcoin', () => {
 import worker from '../src/index';
 import { applySchema } from './utils';
 
+let ipCounter = 1;
+const nextIp = () => `203.0.113.${ipCounter++}`;
+
 async function createTestUser(email: string, username: string, balance: number) {
 	const hashedPassword = await bcrypt.hash('password123', 10);
 	await env.terravest_db
-		.prepare(`INSERT INTO users (email, username, password, role, usd_balance) VALUES (?, ?, ?, ?, ?)`)
-		.bind(email, username, hashedPassword, 'user', balance)
+		.prepare(`INSERT INTO users (email, username, password, role, usd_balance, email_verified) VALUES (?, ?, ?, ?, ?, ?)`)
+		.bind(email, username, hashedPassword, 'user', balance, 1)
 		.run();
 }
 
@@ -42,10 +45,15 @@ async function loginUser(identifier: string) {
 	const res = await worker.fetch(
 		new Request('http://localhost/api/auth/login', {
 			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
+			headers: {
+				'Content-Type': 'application/json',
+				'CF-Connecting-IP': nextIp(),
+			},
 			body: JSON.stringify({
 				identifier,
+				identifierType: identifier.includes('@') ? 'email' : 'username',
 				password: 'password123',
+					turnstileToken: 'test-token',
 			}),
 		}),
 		env,
@@ -185,7 +193,7 @@ describe('Sell API (Worker Environment)', () => {
 
 		expect(res.status).toBe(400);
 		const data = await res.json() as any;
-		expect(data.error).toBe('Insufficient tokens to sell');
+		expect(data.error).toBe('Insufficient tokens to sell.');
 	});
 
 	it('❌ should reject invalid property ID', async () => {
@@ -212,7 +220,7 @@ describe('Sell API (Worker Environment)', () => {
 
 		expect(res.status).toBe(404);
 		const data = await res.json() as any;
-		expect(data.error).toBe('Property not found or price not set');
+		expect(data.error).toBe('Property not found or price not set.');
 	});
 
 	it('❌ should reject invalid input (missing property_id)', async () => {
@@ -260,6 +268,6 @@ describe('Sell API (Worker Environment)', () => {
 
 		expect(res.status).toBe(400);
 		const data = await res.json() as any;
-		expect(data.error).toContain('token_amount');
+		expect(data.error).toBe('Token amount must be a positive number.');
 	});
 });

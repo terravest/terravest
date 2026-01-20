@@ -1,6 +1,7 @@
 import { Env } from "../index";
 import { requireAuth } from "../lib/auth";
 import { json, errorResponse } from "../lib/errors";
+import { getErrorMessage, getLangFromRequest } from "../lib/i18n";
 
 // Trading fee rate (1.5%)
 const TRADING_FEE_RATE = 0.015;
@@ -11,13 +12,20 @@ export const handleSell = async (request: Request, env: Env) => {
     const user = auth.user;
 
     try {
-        const body = await request.json() as any;
+        let body: any;
+        try {
+            body = await request.json();
+        } catch {
+            const lang = getLangFromRequest(request);
+            return errorResponse(getErrorMessage(lang, 'INVALID_JSON'), 400);
+        }
+        const lang = getLangFromRequest(request, body);
         const { property_id, token_amount } = body;
         const db = env.terravest_db;
 
         // Input validation
         if (token_amount === undefined || token_amount === null || typeof token_amount !== 'number' || token_amount <= 0) {
-            return errorResponse("token_amount is required and must be a positive number", 400);
+            return errorResponse(getErrorMessage(lang, 'SELL_INVALID_AMOUNT'), 400);
         }
 
         // Check property existence
@@ -25,13 +33,13 @@ export const handleSell = async (request: Request, env: Env) => {
         const property = await db.prepare("SELECT token_price FROM properties WHERE id = ?").bind(property_id).first();
 
         if (!property || !property.token_price) {
-            return errorResponse("Property not found or price not set", 404);
+            return errorResponse(getErrorMessage(lang, 'SELL_PROPERTY_NOT_FOUND'), 404);
         }
 
         // Check if user has sufficient investment
         const investment = await db.prepare("SELECT * FROM investments WHERE user_id = ? AND property_id = ?").bind(user.id, property_id).first();
         if (!investment || (investment.token_amount as number) < token_amount) {
-            return errorResponse("Insufficient tokens to sell", 400);
+            return errorResponse(getErrorMessage(lang, 'SELL_INSUFFICIENT_TOKENS'), 400);
         }
 
         // 💰 FINANCIAL INTEGRITY: Integer Math (Cents)
@@ -74,7 +82,7 @@ export const handleSell = async (request: Request, env: Env) => {
             // Critical error: Negative balance implies race condition.
             // In a real production system with proper locking this is rare, 
             // but for SQLite D1 we rely on the WHERE clause in UPDATE.
-            return errorResponse("Transaction failed verification. Please contact support.", 500);
+            return errorResponse(getErrorMessage(lang, 'TRANSACTION_VERIFICATION_FAILED'), 500);
         }
 
         // Cleanup: If 0 tokens left, we can keep the record for history or mark as inactive.

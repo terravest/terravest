@@ -308,6 +308,19 @@ type Content = {
     toastRegisterRequirements: string;
     toastRegisterCreated: string;
     toastRegisterSuccessLogin: string;
+    email_verification_required: string;
+    email_verification_sent: string;
+    email_verification_pending_body: string;
+    email_verification_resend: string;
+    email_verification_resend_loading: string;
+    email_verification_resend_failed: string;
+    email_verification_resend_missing: string;
+    email_verification_title: string;
+    email_verification_loading: string;
+    email_verification_success: string;
+    email_verification_expired: string;
+    email_verification_login: string;
+    email_not_verified_error: string;
   };
   propertyDetails: {
     notFound: string;
@@ -783,6 +796,20 @@ export const content: Record<LangType, Content> = {
       toastRegisterRequirements: 'Please meet all password requirements.',
       toastRegisterCreated: 'Account created successfully!',
       toastRegisterSuccessLogin: 'Registration successful! Please log in.',
+      email_verification_required: 'Please verify your email to continue',
+      email_verification_sent: 'Verification email sent. Check your inbox.',
+      email_verification_pending_body:
+        'We sent a verification link to your email. Click the link to activate your account.',
+      email_verification_resend: 'Resend verification email',
+      email_verification_resend_loading: 'Sending verification email...',
+      email_verification_resend_failed: 'Failed to resend verification email.',
+      email_verification_resend_missing: 'Please enter your email to resend verification.',
+      email_verification_title: 'Email Verification',
+      email_verification_loading: 'Verifying your email...',
+      email_verification_success: 'Email verified successfully.',
+      email_verification_expired: 'Verification link is invalid or expired.',
+      email_verification_login: 'Go to login',
+      email_not_verified_error: 'Please verify your email before logging in.',
     },
     propertyDetails: {
       notFound: 'Property not found.',
@@ -1256,6 +1283,20 @@ export const content: Record<LangType, Content> = {
       toastRegisterRequirements: 'Atenda todos os requisitos de senha.',
       toastRegisterCreated: 'Conta criada com sucesso!',
       toastRegisterSuccessLogin: 'Registro concluído! Faça login.',
+      email_verification_required: 'Verifique seu e-mail para continuar',
+      email_verification_sent: 'E-mail de verificação enviado. Verifique sua caixa de entrada.',
+      email_verification_pending_body:
+        'Enviamos um link de verificação para o seu e-mail. Clique no link para ativar sua conta.',
+      email_verification_resend: 'Reenviar e-mail de verificação',
+      email_verification_resend_loading: 'Enviando e-mail de verificação...',
+      email_verification_resend_failed: 'Falha ao reenviar o e-mail de verificação.',
+      email_verification_resend_missing: 'Informe seu e-mail para reenviar a verificação.',
+      email_verification_title: 'Verificação de e-mail',
+      email_verification_loading: 'Verificando seu e-mail...',
+      email_verification_success: 'E-mail verificado com sucesso.',
+      email_verification_expired: 'O link de verificação é inválido ou expirou.',
+      email_verification_login: 'Ir para login',
+      email_not_verified_error: 'Verifique seu e-mail antes de entrar.',
     },
     propertyDetails: {
       notFound: 'Imóvel não encontrado.',
@@ -1730,6 +1771,20 @@ export const content: Record<LangType, Content> = {
       toastRegisterRequirements: 'Cumple todos los requisitos de contraseña.',
       toastRegisterCreated: 'Cuenta creada con éxito!',
       toastRegisterSuccessLogin: 'Registro exitoso! Inicia sesión.',
+      email_verification_required: 'Verifica tu correo para continuar',
+      email_verification_sent: 'Se envió un correo de verificación. Revisa tu bandeja de entrada.',
+      email_verification_pending_body:
+        'Enviamos un enlace de verificación a tu correo. Haz clic para activar tu cuenta.',
+      email_verification_resend: 'Reenviar correo de verificación',
+      email_verification_resend_loading: 'Enviando correo de verificación...',
+      email_verification_resend_failed: 'No se pudo reenviar el correo de verificación.',
+      email_verification_resend_missing: 'Ingresa tu correo para reenviar la verificación.',
+      email_verification_title: 'Verificación de correo',
+      email_verification_loading: 'Verificando tu correo...',
+      email_verification_success: 'Correo verificado correctamente.',
+      email_verification_expired: 'El enlace de verificación es inválido o venció.',
+      email_verification_login: 'Ir a iniciar sesión',
+      email_not_verified_error: 'Verifica tu correo antes de iniciar sesión.',
     },
     propertyDetails: {
       notFound: 'Propiedad no encontrada.',
@@ -2204,6 +2259,20 @@ export const content: Record<LangType, Content> = {
       toastRegisterRequirements: 'Veuillez respecter tous les criteres.',
       toastRegisterCreated: 'Compte créé avec succes!',
       toastRegisterSuccessLogin: 'Inscription réussie! Connectez-vous.',
+      email_verification_required: 'Veuillez vérifier votre e-mail pour continuer',
+      email_verification_sent: 'E-mail de vérification envoyé. Vérifiez votre boîte de réception.',
+      email_verification_pending_body:
+        'Nous avons envoyé un lien de vérification à votre e-mail. Cliquez sur le lien pour activer votre compte.',
+      email_verification_resend: 'Renvoyer l’e-mail de vérification',
+      email_verification_resend_loading: 'Envoi de l’e-mail de vérification...',
+      email_verification_resend_failed: 'Échec de l’envoi de l’e-mail de vérification.',
+      email_verification_resend_missing: 'Saisissez votre e-mail pour renvoyer la vérification.',
+      email_verification_title: 'Vérification de l’e-mail',
+      email_verification_loading: 'Vérification de votre e-mail...',
+      email_verification_success: 'E-mail vérifié avec succès.',
+      email_verification_expired: 'Le lien de vérification est invalide ou expiré.',
+      email_verification_login: 'Aller à la connexion',
+      email_not_verified_error: 'Veuillez vérifier votre e-mail avant de vous connecter.',
     },
     propertyDetails: {
       notFound: 'Bien introuvable.',

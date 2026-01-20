@@ -27,6 +27,8 @@ export default function Login() {
     const [password, setPassword] = useState('');
     const [turnstileToken, setTurnstileToken] = useState<string>("");
     const [rememberMe, setRememberMe] = useState(false);
+    const [showResend, setShowResend] = useState(false);
+    const [isResending, setIsResending] = useState(false);
 
     useEffect(() => {
         if (user) {
@@ -40,6 +42,7 @@ export default function Login() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setShowResend(false);
 
         if (!turnstileToken) {
             toast.error(t.auth.loginBotError);
@@ -50,13 +53,13 @@ export default function Login() {
         toast.dismiss();
 
         try {
-            // DÜZELTME BURADA: (await ...) as any diyerek TypeScript hatasını çözüyoruz
             const response = (await api.login({
                 identifier,
                 identifierType,
                 password,
                 turnstileToken,
-                rememberMe
+                rememberMe,
+                lang
             })) as any;
 
             if (response.token) {
@@ -73,8 +76,12 @@ export default function Login() {
         } catch (error: any) {
             console.error("Login Error:", error);
             let errorMessage = t.auth.loginFailed;
+            const errorCode = error?.error || error?.message;
 
-            if (typeof error === 'string') {
+            if (errorCode === 'EMAIL_NOT_VERIFIED') {
+                errorMessage = t.auth.email_not_verified_error;
+                setShowResend(true);
+            } else if (typeof error === 'string') {
                 errorMessage = error;
             } else if (error.error) {
                 errorMessage = error.error;
@@ -85,6 +92,22 @@ export default function Login() {
             setTurnstileToken('');
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const handleResend = async () => {
+        if (!identifier || !identifier.includes('@')) {
+            toast.error(t.auth.email_verification_resend_missing);
+            return;
+        }
+        setIsResending(true);
+        try {
+            await api.resendVerificationEmail({ email: identifier, lang });
+            toast.success(t.auth.email_verification_sent);
+        } catch (error) {
+            toast.error(t.auth.email_verification_resend_failed);
+        } finally {
+            setIsResending(false);
         }
     };
 
@@ -175,6 +198,20 @@ export default function Login() {
                         >
                             {isLoading ? (<Loader2 className="animate-spin h-5 w-5" />) : (<>{t.auth.loginButton} <ArrowRight className="h-5 w-5" /></>)}
                         </button>
+
+                        {showResend && (
+                            <div className="mt-4 rounded-lg border border-white/20 bg-black/20 p-4 text-sm text-gray-200">
+                                <p className="mb-3">{t.auth.email_verification_required}</p>
+                                <button
+                                    type="button"
+                                    onClick={handleResend}
+                                    disabled={isResending}
+                                    className="w-full bg-[#00E5FF] hover:bg-[#00c4d9] disabled:opacity-60 disabled:cursor-not-allowed text-[#0F172A] font-bold py-2 rounded-lg shadow-lg"
+                                >
+                                    {isResending ? t.auth.email_verification_resend_loading : t.auth.email_verification_resend}
+                                </button>
+                            </div>
+                        )}
                     </form>
 
                     <div className="mt-6 text-center">

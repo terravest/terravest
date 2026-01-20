@@ -1,7 +1,6 @@
 // Reserved Usernames (Case-Insensitive)
 // These usernames are globally reserved and cannot be used for registration
 export const RESERVED_USERNAMES = [
-    "admin",
     "support",
     "terravest",
     "root",

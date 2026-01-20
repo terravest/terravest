@@ -1,6 +1,7 @@
 import { Env } from "../index";
 import { requireAuth } from "../lib/auth";
 import { json, errorResponse } from "../lib/errors";
+import { getErrorMessage, getLangFromRequest } from "../lib/i18n";
 
 /**
  * Handle withdrawal request
@@ -12,23 +13,30 @@ export async function handleWithdraw(request: Request, env: Env): Promise<Respon
     const user = auth.user;
 
     try {
-        const body = await request.json() as any;
+        let body: any;
+        try {
+            body = await request.json();
+        } catch {
+            const lang = getLangFromRequest(request);
+            return errorResponse(getErrorMessage(lang, 'INVALID_JSON'), 400);
+        }
+        const lang = getLangFromRequest(request, body);
         const { amount, btc_address } = body;
 
         // 💰 FINANCIAL INTEGRITY: Amount is in CENTS
         const amountCents = Number(amount);
 
         if (isNaN(amountCents) || amountCents <= 0) {
-            return errorResponse("Amount must be a positive number", 400);
+            return errorResponse(getErrorMessage(lang, 'WITHDRAW_INVALID_AMOUNT'), 400);
         }
 
         // $50.00 Limit = 5000 Cents
         if (amountCents < 5000) {
-            return errorResponse("Minimum withdrawal amount is $50.00", 400);
+            return errorResponse(getErrorMessage(lang, 'WITHDRAW_MINIMUM_AMOUNT'), 400);
         }
 
         if (!btc_address || btc_address.length < 10) {
-            return errorResponse("Invalid Bitcoin address", 400);
+            return errorResponse(getErrorMessage(lang, 'WITHDRAW_INVALID_ADDRESS'), 400);
         }
 
         const db = env.terravest_db;
@@ -37,7 +45,7 @@ export async function handleWithdraw(request: Request, env: Env): Promise<Respon
         const currentUser = await db.prepare("SELECT usd_balance FROM users WHERE id = ?").bind(user.id).first();
 
         if (!currentUser || (currentUser.usd_balance as number) < amountCents) {
-            return errorResponse("Insufficient balance", 400);
+            return errorResponse(getErrorMessage(lang, 'WITHDRAW_INSUFFICIENT_BALANCE'), 400);
         }
 
         // Atomic transaction: deduct balance and create withdrawal request

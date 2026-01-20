@@ -3,14 +3,12 @@ import { Mail, Lock, Loader2, Check, X, CheckCircle, User } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import Navbar from '../components/Navbar';
-import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import { LanguageContext } from '../App';
 import { content } from '../content';
 
 export default function Register() {
     const navigate = useNavigate();
-    const { login } = useAuth();
     const lang = useContext(LanguageContext);
     const t = content[lang];
 
@@ -64,17 +62,10 @@ export default function Register() {
         }
 
         try {
-            // DÜZELTME BURADA: (await ...) as any diyerek TypeScript hatasını çözüyoruz
-            const response = (await api.register({ email, username, password })) as any;
-
-            if (response.token && response.user) {
-                login(response.token, response.user, false);
-                toast.success(t.auth.toastRegisterCreated);
-                navigate(getLink('/'));
-            } else {
-                toast.success(t.auth.toastRegisterSuccessLogin);
-                navigate(getLink('/login'));
-            }
+            await api.register({ email, username, password, lang });
+            sessionStorage.setItem('pendingVerificationEmail', email.toLowerCase());
+            toast.success(t.auth.email_verification_sent);
+            navigate(getLink('/verify-email-pending'), { replace: true, state: { email: email.toLowerCase() } });
 
         } catch (error: any) {
             console.error("Registration Error:", error);

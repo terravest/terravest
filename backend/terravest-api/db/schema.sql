@@ -1,7 +1,7 @@
 -- ==========================================
 -- Terravest API Database Schema (FINAL CONSOLIDATED)
 -- Cloudflare D1 (SQLite) Compatible
--- Includes: Financial Integrity (Integers) + All Migrations (0001-0005)
+-- Includes: Financial Integrity (Integers) + Safety Checks (No Negative Balance)
 -- ==========================================
 
 -- ==========================================
@@ -16,7 +16,9 @@ CREATE TABLE IF NOT EXISTS users (
     password TEXT,
     role TEXT DEFAULT 'user',
     balance INTEGER DEFAULT 0,      -- Stored in Satoshis (1 BTC = 100,000,000 Sats)
-    usd_balance INTEGER DEFAULT 0,  -- Stored in Cents ($1.00 = 100 cents)
+    usd_balance INTEGER NOT NULL DEFAULT 0 CHECK (usd_balance >= 0),
+    email_verified INTEGER NOT NULL DEFAULT 0,
+    email_verified_at TEXT,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -29,7 +31,7 @@ CREATE TABLE IF NOT EXISTS properties (
     price_usd INTEGER,              -- Stored in Cents
     token_price INTEGER,            -- Stored in Cents
     total_tokens INTEGER,
-    available_tokens INTEGER,
+    available_tokens INTEGER NOT NULL DEFAULT 0 CHECK (available_tokens >= 0),
     rental_yield TEXT,              -- "8.5%" (TEXT support from migration)
     image_url TEXT,
     monthly_yield INTEGER,          -- Stored in Cents
@@ -57,7 +59,8 @@ CREATE TABLE IF NOT EXISTS investments (
     unclaimed_rewards INTEGER DEFAULT 0, -- Cents
     last_rent_calc_date TEXT,
     total_invested INTEGER DEFAULT 0, -- Cents
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, property_id)     -- Required for ON CONFLICT upserts
 );
 
 -- DEPOSITS
@@ -127,6 +130,17 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+-- EMAIL_VERIFICATION_TOKENS
+CREATE TABLE IF NOT EXISTS email_verification_tokens (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    token_hash TEXT NOT NULL,
+    expires_at TEXT NOT NULL,
+    used INTEGER DEFAULT 0, -- 0 = false, 1 = true
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
 -- ==========================================
 -- INDEXES
 -- ==========================================
@@ -161,3 +175,8 @@ CREATE INDEX IF NOT EXISTS idx_property_images_property_order ON property_images
 CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_token_hash ON password_reset_tokens(token_hash);
 CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user_id ON password_reset_tokens(user_id);
 CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_expires_at ON password_reset_tokens(expires_at);
+
+-- EMAIL_VERIFICATION_TOKENS
+CREATE INDEX IF NOT EXISTS idx_email_verification_tokens_token_hash ON email_verification_tokens(token_hash);
+CREATE INDEX IF NOT EXISTS idx_email_verification_tokens_user_id ON email_verification_tokens(user_id);
+CREATE INDEX IF NOT EXISTS idx_email_verification_tokens_expires_at ON email_verification_tokens(expires_at);

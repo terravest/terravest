@@ -1,105 +1,106 @@
-import { useState, useEffect, useContext } from 'react';
+import { useEffect, useState, useContext } from 'react';
 import Navbar from '../components/Navbar';
+import PropertyCard from '../components/PropertyCard';
 import { api } from '../lib/api';
-import { Loader2, AlertCircle, Search, SlidersHorizontal } from 'lucide-react';
-import PropertyCard from '../components/PropertyCard'; // Yeni olusturulan bileseni import ettik
+import { Search, SlidersHorizontal, Loader2, AlertCircle } from 'lucide-react';
 import { LanguageContext } from '../App';
 import { content } from '../content';
 
+interface Property {
+    id: number;
+    title: string;
+    location: string;
+    price_usd: number; // Stored in Cents
+    total_tokens: number;
+    available_tokens: number;
+    rental_yield: string;
+    image_url?: string;
+    images?: { url: string }[];
+}
+
 export default function Marketplace() {
+    const [properties, setProperties] = useState<Property[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
     const lang = useContext(LanguageContext);
     const t = content[lang];
-    const [properties, setProperties] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [searchTerm, setSearchTerm] = useState("");
-
-    // Function to fetch data from API
-    const fetchProperties = async () => {
-        try {
-            const data = await api.getProperties();
-            setProperties(data || []);
-        } catch (err: any) {
-            console.error("Marketplace Error:", err);
-            setError(err.message || t.marketplace.errorFallback);
-        } finally {
-            setLoading(false);
-        }
-    };
 
     useEffect(() => {
-        fetchProperties();
+        async function loadProperties() {
+            try {
+                const data = await api.getProperties();
+                if (Array.isArray(data)) {
+                    setProperties(data);
+                }
+            } catch (error) {
+                console.error("Failed to load properties", error);
+            } finally {
+                setLoading(false);
+            }
+        }
+        loadProperties();
     }, []);
 
-    // Search filter
-    const filteredProperties = properties.filter((p: any) => 
-        p.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.location?.toLowerCase().includes(searchTerm.toLowerCase())
+    const filteredProperties = properties.filter(p =>
+        p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (p.location && p.location.toLowerCase().includes(searchTerm.toLowerCase()))
     );
 
     return (
-        <div className="min-h-screen bg-[#F9F7F3] font-sans pb-20" data-testid="marketplace-page">
+        <div className="min-h-screen bg-[#F9F7F3] font-sans">
             <Navbar />
 
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                {/* Header and Search Section */}
-                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
-                    <div>
-                        <span className="text-[#009B9E] font-bold tracking-widest text-xs uppercase bg-[#009B9E]/10 px-3 py-1 rounded-full">
-                            {t.marketplace.heroBadge}
-                        </span>
-                        <h1 className="text-4xl font-extrabold text-[#0F172A] mt-3 tracking-tight">
-                            {t.marketplace.title}
-                        </h1>
-                        <p className="text-slate-500 mt-2 text-lg">
-                            {t.marketplace.subtitle}
-                        </p>
-                    </div>
+            {/* Header & Search */}
+            <div className="bg-[#0F172A] text-white pt-12 pb-24 px-4 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-96 h-96 bg-[#009B9E]/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+
+                <div className="container mx-auto max-w-6xl relative z-10 text-center">
+                    <h1 className="text-4xl md:text-5xl font-black mb-6 tracking-tight">
+                        {t.marketplace.title}
+                    </h1>
+                    <p className="text-slate-300 text-lg mb-8 max-w-2xl mx-auto">
+                        {t.marketplace.subtitle}
+                    </p>
 
                     {/* Search Bar */}
-                    <div className="flex items-center gap-3 bg-white p-2 rounded-xl border border-slate-200 shadow-sm w-full md:w-auto">
-                        <Search className="text-slate-400 ml-2" size={20} />
+                    <div className="bg-white p-2 rounded-2xl shadow-xl max-w-2xl mx-auto flex items-center gap-2">
+                        <div className="bg-slate-100 p-3 rounded-xl text-slate-500">
+                            <Search size={20} />
+                        </div>
                         <input
-                            type="text" 
+                            type="text"
                             placeholder={t.marketplace.searchPlaceholder}
-                            className="bg-transparent border-none outline-none text-slate-700 placeholder-slate-400 w-full md:w-64"
+                            className="flex-1 bg-transparent text-slate-800 placeholder-slate-400 outline-none text-lg font-medium px-2"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
-                        <button className="p-2 hover:bg-slate-50 rounded-lg text-slate-500 transition">
-                            <SlidersHorizontal size={20} />
+                        <button className="bg-[#009B9E] hover:bg-[#008B8E] text-white px-6 py-3 rounded-xl font-bold transition-all flex items-center gap-2">
+                            <SlidersHorizontal size={18} />
+                            <span className="hidden md:inline">{t.marketplace.filters}</span>
                         </button>
                     </div>
                 </div>
+            </div>
 
-                {/* Loading State */}
-                {loading && (
-                    <div className="flex justify-center py-32">
-                        <Loader2 className="animate-spin text-[#009B9E]" size={48} />
+            {/* Properties Grid */}
+            <div className="container mx-auto max-w-7xl px-4 -mt-12 pb-20 relative z-20">
+                {loading ? (
+                    <div className="flex justify-center items-center py-20">
+                        <Loader2 className="animate-spin text-[#009B9E]" size={40} />
                     </div>
-                )}
-
-                {/* Error State */}
-                {error && (
-                    <div className="text-center text-red-500 py-10 bg-red-50 rounded-xl border border-red-200">
-                        <AlertCircle className="mx-auto mb-2" /> {error}
-                    </div>
-                )}
-
-                {/* If List is Empty */}
-                {!loading && !error && filteredProperties.length === 0 && (
-                    <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-slate-300">
-                        <p className="text-slate-500 text-lg">{t.marketplace.emptyState}</p>
-                    </div>
-                )}
-
-                {/* Property List (Grid) */}
-                {!loading && !error && filteredProperties.length > 0 && (
+                ) : filteredProperties.length > 0 ? (
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                         {filteredProperties.map((property) => (
-                            // Now the code is this simple and clean:
                             <PropertyCard key={property.id} property={property} />
                         ))}
+                    </div>
+                ) : (
+                    <div className="text-center py-20 bg-white rounded-3xl shadow-sm border border-slate-200">
+                        <div className="bg-slate-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
+                            <AlertCircle size={32} />
+                        </div>
+                        <h3 className="text-xl font-bold text-[#0F172A] mb-2">{t.marketplace.noResults}</h3>
+                        <p className="text-slate-500">{t.marketplace.noResultsSubtitle}</p>
                     </div>
                 )}
             </div>

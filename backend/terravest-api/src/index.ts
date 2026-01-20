@@ -1,5 +1,5 @@
 import { Buffer } from 'buffer';
-// Buffer polyfill for Cloudflare Workers
+import { handleImport } from "./routes/import";
 globalThis.Buffer = Buffer;
 
 import { Hono } from 'hono';
@@ -63,6 +63,7 @@ app.use('*', secureHeaders({
 	}
 }));
 
+app.post('/import/property', (c) => handleImport(c.req.raw, c.env));
 // ==========================================
 // 🛡️ MIDDLEWARE (CORS & ERROR HANDLING)
 // ==========================================

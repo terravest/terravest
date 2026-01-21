@@ -1,5 +1,4 @@
-// 🚨 PRODUCTION FIX: URL Hardcoded to bypass config errors
-const API_URL = "https://terravest-api.terravest.workers.dev/api";
+const API_URL = "https://api.terravest.homes/api";
 
 // --- REQUEST HELPER ---
 const request = async (endpoint: string, options: RequestInit = {}) => {
@@ -43,9 +42,9 @@ export const api = {
 
     // Fix: Backend usually requires both old and new password, so we accept 'data' object.
     changePassword: (data: any) =>
-        request("/auth/change-password", { 
-            method: "PUT", 
-            body: JSON.stringify(data) 
+        request("/auth/change-password", {
+            method: "PUT",
+            body: JSON.stringify(data)
         }),
 
     // ============================

@@ -3,24 +3,20 @@
 	"name": "terravest-api",
 	"main": "src/index.ts",
 	"compatibility_date": "2026-01-03",
-	"compatibility_flags": ["nodejs_compat"],
-
-	
-
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
 	"observability": {
 		"enabled": true
 	},
-
 	// ==========================================
 	// 🌍 PRODUCTION ENV VARIABLES
 	// ==========================================
-
 	"vars": {
 		"ENVIRONMENT": "production",
-		"FRONTEND_URL": "https://terravest-frontend.pages.dev",
-		"VITE_API_URL": "https://terravest-api.terravest.workers.dev/api" 
+		"FRONTEND_URL": "https://terravest.homes",
+		"VITE_API_URL": "https://api.terravest.homes/api"
 	},
-
 	// ==========================================
 	// 🗄️ D1 DATABASE
 	// ==========================================
@@ -32,7 +28,6 @@
 			"migrations_dir": "db/migrations"
 		}
 	],
-
 	// ==========================================
 	// ⏱️ CRON JOBS
 	// ==========================================
@@ -44,7 +39,6 @@
 			"0 1 * * *"
 		]
 	},
-
 	// ==========================================
 	// 🪣 R2 BUCKET
 	// ==========================================

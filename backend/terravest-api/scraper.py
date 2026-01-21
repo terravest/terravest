@@ -6,7 +6,7 @@ from homeharvest import scrape_property
 
 # ================= SETTINGS =================
 # Worker Endpoint (Production)
-WORKER_URL = "https://terravest-api.terravest.workers.dev/import/property"
+WORKER_URL = "https://api.terravest.homes/import/property"
 IMPORT_KEY = "terravest-local-import-2024"
 
 # Search Settings
@@ -34,7 +34,8 @@ def calculate_smart_yield(price):
 def main():
     print("🚀 Starting scraper (HomeHarvest)...")
     print(f"📍 Location: {LOCATION} | Mode: {LISTING_TYPE}")
-    print(f"📸 Filter: Properties with at least {MIN_IMAGES} photos will be selected.")
+    print(
+        f"📸 Filter: Properties with at least {MIN_IMAGES} photos will be selected.")
 
     try:
         print("⏳ Scanning listings, please wait...")
@@ -48,7 +49,8 @@ def main():
             print("❌ No properties found.")
             return
 
-        print(f"✅ Found {len(properties)} listings. Filtering and importing...")
+        print(
+            f"✅ Found {len(properties)} listings. Filtering and importing...")
 
     except Exception as e:
         print(f"❌ Scrape error: {e}")
@@ -190,7 +192,8 @@ def main():
                 try:
                     res_json = response.json()
                     if res_json.get("skipped") is True:
-                        print(f"⏩ Skipped (already exists): {payload['title']}")
+                        print(
+                            f"⏩ Skipped (already exists): {payload['title']}")
                     else:
                         print(
                             f"✅ Imported ({len(images)} images): {payload['title']} (${price}) -> Yield: {smart_rental_yield}")

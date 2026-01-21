@@ -11,24 +11,22 @@ export interface Property {
     title: string;
     description?: string;
     location: string;
-    price_usd: number;      // Cents (Örn: 42000000 -> $420,000)
-    token_price: number;    // Cents
+    price_usd: number;
+    token_price: number;
     total_tokens: number;
     available_tokens: number;
     rental_yield: string;
     image_url?: string;
     images?: { url: string }[];
     status?: string;
-    risk_score?: number;    // YENİ: 1-5 arası
-    occupancy_rate?: number;// YENİ: 0-100 arası
+    risk_score?: number;
+    occupancy_rate?: number;
 }
 
 export default function Marketplace() {
     const [properties, setProperties] = useState<Property[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-
-    // --- FILTER STATES ---
     const [showFilters, setShowFilters] = useState(false);
     const [filters, setFilters] = useState({
         minPrice: '',
@@ -43,12 +41,8 @@ export default function Marketplace() {
     useEffect(() => {
         async function loadProperties() {
             try {
-                // API'den veriyi çekiyoruz
                 const data = await api.getProperties();
-
-                // Gelen veriyi konsola yazdıralım (Debug için)
                 console.log("📡 Marketplace Loaded:", data);
-
                 if (Array.isArray(data)) {
                     setProperties(data);
                 }
@@ -61,28 +55,22 @@ export default function Marketplace() {
         loadProperties();
     }, []);
 
-    // --- HELPER: Parse Yield String ---
     const getYieldValue = (yieldStr: string) => {
         if (!yieldStr) return 0;
         const clean = yieldStr.toString().replace(/[^0-9.]/g, '');
         return parseFloat(clean) || 0;
     };
 
-    // --- FILTER & SORT LOGIC ---
     const filteredProperties = properties
         .filter(p => {
-            // 1. Text Search
             const matchesSearch = p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 (p.location && p.location.toLowerCase().includes(searchTerm.toLowerCase()));
 
-            // 2. Price Filter (Database is Cents, Input is Dollars)
             const priceDollars = p.price_usd / 100;
             const minPriceVal = filters.minPrice ? parseFloat(filters.minPrice) : 0;
             const maxPriceVal = filters.maxPrice ? parseFloat(filters.maxPrice) : Infinity;
-
             const matchesPrice = priceDollars >= minPriceVal && priceDollars <= maxPriceVal;
 
-            // 3. Yield Filter
             const yieldVal = getYieldValue(p.rental_yield);
             const minYieldVal = filters.minYield ? parseFloat(filters.minYield) : 0;
             const matchesYield = yieldVal >= minYieldVal;
@@ -108,11 +96,11 @@ export default function Marketplace() {
         <div className="min-h-screen bg-[#F9F7F3] font-sans">
             <Navbar />
 
-            {/* Header & Search */}
-            <div className="bg-[#0F172A] text-white pt-12 pb-32 px-4 relative overflow-visible">
+            {/* Header & Search - ✅ overflow-visible ve relative kaldırıldı */}
+            <div className="bg-[#0F172A] text-white pt-12 pb-32 px-4">
                 <div className="absolute top-0 right-0 w-96 h-96 bg-[#009B9E]/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
 
-                <div className="container mx-auto max-w-6xl relative z-10 text-center">
+                <div className="container mx-auto max-w-6xl text-center">
                     <h1 className="text-4xl md:text-5xl font-black mb-6 tracking-tight">
                         {t.marketplace.title}
                     </h1>
@@ -120,9 +108,9 @@ export default function Marketplace() {
                         {t.marketplace.subtitle}
                     </p>
 
-                    {/* Search Bar - ✅ Z-index artırıldı */}
-                    <div className="max-w-2xl mx-auto relative z-50">
-                        <div className="bg-white p-2 rounded-2xl shadow-xl flex items-center gap-2 relative">
+                    {/* Search Bar Container - ✅ z-[100] eklendi */}
+                    <div className="max-w-2xl mx-auto relative z-[100]">
+                        <div className="bg-white p-2 rounded-2xl shadow-xl flex items-center gap-2">
                             <div className="bg-slate-100 p-3 rounded-xl text-slate-500">
                                 <Search size={20} />
                             </div>
@@ -142,47 +130,78 @@ export default function Marketplace() {
                             </button>
                         </div>
 
-                        {/* Filters Panel - ✅ Z-index artırıldı */}
+                        {/* Filters Panel - ✅ z-[100] ve backdrop eklendi */}
                         {showFilters && (
-                            <div className="absolute top-full left-0 right-0 mt-4 bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 z-50 animate-in slide-in-from-top-2 fade-in duration-200 text-left">
-                                <div className="grid md:grid-cols-3 gap-6">
-                                    <div>
-                                        <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Price Range (USD)</label>
-                                        <div className="flex items-center gap-2">
-                                            <input type="number" placeholder="Min" value={filters.minPrice} onChange={(e) => setFilters({ ...filters, minPrice: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-800 outline-none focus:ring-2 focus:ring-[#009B9E]" />
-                                            <span className="text-slate-400">-</span>
-                                            <input type="number" placeholder="Max" value={filters.maxPrice} onChange={(e) => setFilters({ ...filters, maxPrice: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-800 outline-none focus:ring-2 focus:ring-[#009B9E]" />
+                            <>
+                                {/* Backdrop - kartların üzerine overlay */}
+                                <div
+                                    className="fixed inset-0 bg-black/20 z-[90]"
+                                    onClick={() => setShowFilters(false)}
+                                />
+
+                                {/* Filter Panel */}
+                                <div className="absolute top-full left-0 right-0 mt-4 bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 z-[100] text-left">
+                                    <div className="grid md:grid-cols-3 gap-6">
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Price Range (USD)</label>
+                                            <div className="flex items-center gap-2">
+                                                <input
+                                                    type="number"
+                                                    placeholder="Min"
+                                                    value={filters.minPrice}
+                                                    onChange={(e) => setFilters({ ...filters, minPrice: e.target.value })}
+                                                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-800 outline-none focus:ring-2 focus:ring-[#009B9E]"
+                                                />
+                                                <span className="text-slate-400">-</span>
+                                                <input
+                                                    type="number"
+                                                    placeholder="Max"
+                                                    value={filters.maxPrice}
+                                                    onChange={(e) => setFilters({ ...filters, maxPrice: e.target.value })}
+                                                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-800 outline-none focus:ring-2 focus:ring-[#009B9E]"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Min Yield %</label>
+                                            <div className="relative">
+                                                <input
+                                                    type="number"
+                                                    placeholder="e.g. 8"
+                                                    value={filters.minYield}
+                                                    onChange={(e) => setFilters({ ...filters, minYield: e.target.value })}
+                                                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-800 outline-none focus:ring-2 focus:ring-[#009B9E] pl-9"
+                                                />
+                                                <Percent className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Sort By</label>
+                                            <select
+                                                value={filters.sortBy}
+                                                onChange={(e) => setFilters({ ...filters, sortBy: e.target.value })}
+                                                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-800 outline-none focus:ring-2 focus:ring-[#009B9E] appearance-none"
+                                            >
+                                                <option value="newest">Newest Listed</option>
+                                                <option value="price_asc">Price: Low to High</option>
+                                                <option value="price_desc">Price: High to Low</option>
+                                                <option value="yield_desc">Highest Yield</option>
+                                            </select>
                                         </div>
                                     </div>
-                                    <div>
-                                        <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Min Yield %</label>
-                                        <div className="relative">
-                                            <input type="number" placeholder="e.g. 8" value={filters.minYield} onChange={(e) => setFilters({ ...filters, minYield: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-800 outline-none focus:ring-2 focus:ring-[#009B9E] pl-9" />
-                                            <Percent className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Sort By</label>
-                                        <select value={filters.sortBy} onChange={(e) => setFilters({ ...filters, sortBy: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-800 outline-none focus:ring-2 focus:ring-[#009B9E] appearance-none">
-                                            <option value="newest">Newest Listed</option>
-                                            <option value="price_asc">Price: Low to High</option>
-                                            <option value="price_desc">Price: High to Low</option>
-                                            <option value="yield_desc">Highest Yield</option>
-                                        </select>
+                                    <div className="mt-6 flex justify-between items-center border-t border-slate-100 pt-4">
+                                        <button onClick={clearFilters} className="text-slate-400 text-sm hover:text-red-500 font-medium transition-colors">Clear All Filters</button>
+                                        <div className="text-slate-500 text-sm font-bold">Showing {filteredProperties.length} Properties</div>
                                     </div>
                                 </div>
-                                <div className="mt-6 flex justify-between items-center border-t border-slate-100 pt-4">
-                                    <button onClick={clearFilters} className="text-slate-400 text-sm hover:text-red-500 font-medium transition-colors">Clear All Filters</button>
-                                    <div className="text-slate-500 text-sm font-bold">Showing {filteredProperties.length} Properties</div>
-                                </div>
-                            </div>
+                            </>
                         )}
                     </div>
                 </div>
             </div>
 
-            {/* Properties Grid - ✅ Z-index düşürüldü */}
-            <div className="container mx-auto max-w-7xl px-4 -mt-12 pb-20 relative z-10">
+            {/* Properties Grid - ✅ z-index düşürüldü */}
+            <div className="container mx-auto max-w-7xl px-4 -mt-12 pb-20 relative z-0">
                 {loading ? (
                     <div className="flex justify-center items-center py-20">
                         <Loader2 className="animate-spin text-[#009B9E]" size={40} />

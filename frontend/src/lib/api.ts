@@ -1,4 +1,7 @@
-const API_URL = "https://api.terravest.homes/api";
+import { API_BASE_URL } from "../config/api";
+
+
+const API_URL = API_BASE_URL;
 
 // --- REQUEST HELPER ---
 const request = async (endpoint: string, options: RequestInit = {}) => {
@@ -9,9 +12,15 @@ const request = async (endpoint: string, options: RequestInit = {}) => {
         ...options.headers,
     };
 
-    // Endpoint başında / varsa ve API_URL de / ile bitiyorsa veya tam tersi durumlar için basit birleştirme
-    // Bizim yapımızda API_URL sonu /api, endpoint /auth... olduğu için direkt birleşebilir.
+    // Config'den gelen URL'in sonunda / varsa temizleyelim, endpoint başında / varsa onu da kontrol edelim.
+    // Ancak config dosyanızda "https://api.terravest.homes/api" yazıyor (sonunda slash yok).
+    // Endpointler de "/auth/..." diye başlıyor.
+    // Bu yüzden direkt birleştirme güvenlidir.
     const url = `${API_URL}${endpoint}`;
+
+    // Debug için konsola basalım (Sorun çözüldüğünde silebilirsiniz)
+    // console.log(`📡 Requesting: ${url}`);
+
     const response = await fetch(url, { ...options, headers });
 
     // Safety check: Handle 204 No Content or non-JSON responses gracefully

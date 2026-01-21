@@ -49,10 +49,52 @@ interface Variables {
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 
+// ==========================================
+// 🛡️ MIDDLEWARE: CORS (EN ÖNCELİKLİ)
+// ==========================================
+app.use(
+	'/*',
+	cors({
+		origin: (origin, c) => {
+			// Origin yoksa (sunucu-sunucu isteği) izin ver
+			if (!origin) return '*';
 
-app.options('*', (c) => {
-	return c.text('', 204);
-});
+			const env = c.env as Env;
+
+			const allowedOrigins = [
+				// Production
+				'https://terravest.homes',
+				'https://www.terravest.homes',
+				'https://terravest-frontend.pages.dev',
+				// Development
+				'http://localhost:5173',
+				'http://localhost:3000',
+				'http://127.0.0.1:5173',
+				'http://127.0.0.1:3000',
+			];
+
+			// Environment variable'dan gelen URL'i de ekle
+			if (env.FRONTEND_URL) {
+				const cleanEnvUrl = env.FRONTEND_URL
+					.replace(/\/$/, '')
+					.replace(/\/api$/, '');
+				if (!allowedOrigins.includes(cleanEnvUrl)) {
+					allowedOrigins.push(cleanEnvUrl);
+				}
+			}
+
+			// Debug için (Production'da kaldırabilirsiniz)
+			console.log(`🔍 CORS Check - Origin: ${origin}, Allowed: ${allowedOrigins.includes(origin)}`);
+
+			return allowedOrigins.includes(origin) ? origin : null;
+		},
+		allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+		allowHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+		credentials: true,
+		exposeHeaders: ['Content-Length', 'Content-Type'],
+		maxAge: 86400, // 24 hours cache for preflight
+	})
+);
 
 // ==========================================
 // 🛡️ MIDDLEWARE: SECURITY HEADERS
@@ -69,41 +111,15 @@ app.use('*', secureHeaders({
 	}
 }));
 
+// ==========================================
+// 🔄 PREFLIGHT HANDLER (OPTIONS Requests)
+// ==========================================
+app.options('*', (c) => {
+	return c.text('', 204);
+});
+
+// Import handler
 app.post('/import/property', (c) => handleImport(c.req.raw, c.env));
-// ==========================================
-// 🛡️ MIDDLEWARE (CORS & ERROR HANDLING)
-// ==========================================
-app.use(
-	'/*',
-	cors({
-		origin: (origin, c) => {
-			if (!origin) return null;
-
-			const env = c.env as Env;
-
-			const allowedOrigins = [
-				'https://terravest-frontend.pages.dev',
-				'https://terravest.homes',
-				'https://www.terravest.homes',
-			];
-
-			if (env.FRONTEND_URL) {
-				const cleanEnvUrl = env.FRONTEND_URL
-					.replace(/\/$/, '')
-					.replace(/\/api$/, '');
-				allowedOrigins.push(cleanEnvUrl);
-			}
-
-			return allowedOrigins.includes(origin) ? origin : null;
-		},
-		allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-		allowHeaders: ['Content-Type', 'Authorization'],
-		credentials: true,
-		exposeHeaders: ['Content-Length', 'Content-Type'],
-		maxAge: 86400,
-	})
-);
-
 
 // GLOBAL ERROR HANDLER
 app.onError((err, c) => {

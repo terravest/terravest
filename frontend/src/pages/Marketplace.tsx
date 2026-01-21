@@ -120,9 +120,9 @@ export default function Marketplace() {
                         {t.marketplace.subtitle}
                     </p>
 
-                    {/* Search Bar */}
-                    <div className="max-w-2xl mx-auto relative">
-                        <div className="bg-white p-2 rounded-2xl shadow-xl flex items-center gap-2 relative z-20">
+                    {/* Search Bar - ✅ Z-index artırıldı */}
+                    <div className="max-w-2xl mx-auto relative z-50">
+                        <div className="bg-white p-2 rounded-2xl shadow-xl flex items-center gap-2 relative">
                             <div className="bg-slate-100 p-3 rounded-xl text-slate-500">
                                 <Search size={20} />
                             </div>
@@ -142,9 +142,9 @@ export default function Marketplace() {
                             </button>
                         </div>
 
-                        {/* Filters Panel */}
+                        {/* Filters Panel - ✅ Z-index artırıldı */}
                         {showFilters && (
-                            <div className="absolute top-full left-0 right-0 mt-4 bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 z-10 animate-in slide-in-from-top-2 fade-in duration-200 text-left">
+                            <div className="absolute top-full left-0 right-0 mt-4 bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 z-50 animate-in slide-in-from-top-2 fade-in duration-200 text-left">
                                 <div className="grid md:grid-cols-3 gap-6">
                                     <div>
                                         <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Price Range (USD)</label>
@@ -181,8 +181,8 @@ export default function Marketplace() {
                 </div>
             </div>
 
-            {/* Properties Grid */}
-            <div className="container mx-auto max-w-7xl px-4 -mt-12 pb-20 relative z-20">
+            {/* Properties Grid - ✅ Z-index düşürüldü */}
+            <div className="container mx-auto max-w-7xl px-4 -mt-12 pb-20 relative z-10">
                 {loading ? (
                     <div className="flex justify-center items-center py-20">
                         <Loader2 className="animate-spin text-[#009B9E]" size={40} />

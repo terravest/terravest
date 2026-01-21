@@ -49,6 +49,11 @@ interface Variables {
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 
+
+app.options('*', (c) => {
+	return c.text('', 204);
+});
+
 // ==========================================
 // 🛡️ MIDDLEWARE: SECURITY HEADERS
 // ==========================================
@@ -60,7 +65,7 @@ app.use('*', secureHeaders({
 	referrerPolicy: "strict-origin-when-cross-origin",
 	contentSecurityPolicy: {
 		defaultSrc: ["'self'"],
-		imgSrc: ["'self'", "data:", "https://terravest-images.*"],
+		imgSrc: ["'self'", "data:", "https://assets.terravest.homes"],
 	}
 }));
 
@@ -68,34 +73,37 @@ app.post('/import/property', (c) => handleImport(c.req.raw, c.env));
 // ==========================================
 // 🛡️ MIDDLEWARE (CORS & ERROR HANDLING)
 // ==========================================
-app.use('/*', async (c, next) => {
-	const env = c.env as Env;
+app.use(
+	'/*',
+	cors({
+		origin: (origin, c) => {
+			if (!origin) return null;
 
-	return cors({
-		origin: (origin) => {
-			// Production Frontend İzni (Kesin Eşleşme)
-			// Not: Frontend URL'inin sonunda / veya /api OLMAMALIDIR.
-			if (origin === 'https://terravest-frontend.pages.dev') {
-				return origin;
-			}
+			const env = c.env as Env;
 
-			// Env Değişkeni Kontrolü (Yedek)
-			// Env'den gelen URL'in sonundaki /api veya trailing slash temizlenir
+			const allowedOrigins = [
+				'https://terravest-frontend.pages.dev',
+				'https://terravest.homes',
+				'https://www.terravest.homes',
+			];
+
 			if (env.FRONTEND_URL) {
-				const cleanEnvUrl = env.FRONTEND_URL.replace(/\/$/, "").replace(/\/api$/, "");
-				if (origin === cleanEnvUrl) return origin;
+				const cleanEnvUrl = env.FRONTEND_URL
+					.replace(/\/$/, '')
+					.replace(/\/api$/, '');
+				allowedOrigins.push(cleanEnvUrl);
 			}
 
-			// Eşleşme yoksa null döner (CORS Block)
-			return null;
+			return allowedOrigins.includes(origin) ? origin : null;
 		},
 		allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
 		allowHeaders: ['Content-Type', 'Authorization'],
 		credentials: true,
 		exposeHeaders: ['Content-Length', 'Content-Type'],
 		maxAge: 86400,
-	})(c, next);
-});
+	})
+);
+
 
 // GLOBAL ERROR HANDLER
 app.onError((err, c) => {

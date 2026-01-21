@@ -3,6 +3,36 @@ import { Env } from "./index";
 // MANAGEMENT FEE RATE (10%)
 const MANAGEMENT_FEE_RATE = 0.10;
 
+// 1. DAILY OCCUPANCY SIMULATION
+export async function updateOccupancyRates(env: Env) {
+    console.log("📈 Daily Occupancy Simulation Started");
+
+    try {
+        // Logic: Daily random fluctuation (0% - 2% increase simulated)
+        // Properties with higher risk scores increase occupancy slower.
+        // ABS(RANDOM() % 3) -> Adds 0, 1, or 2 points.
+        // MIN(100, ...) -> Ensures it doesn't exceed 100%.
+
+        const query = `
+            UPDATE properties
+            SET 
+                occupancy_rate = MIN(100, occupancy_rate + (ABS(RANDOM()) % 3)), 
+                last_occupancy_update = datetime('now')
+            WHERE 
+                status = 'active' 
+                AND occupancy_rate < 100
+        `;
+
+        const result = await env.terravest_db.prepare(query).run();
+
+        console.log(`✅ Occupancy rates updated. Modified ${result.meta.changes} properties.`);
+
+    } catch (e: any) {
+        console.error("❌ CRON ERROR (Occupancy Update):", e);
+    }
+}
+
+// 2. RENT DISTRIBUTION (Updated to include Occupancy Rate)
 export async function distributeRent(env: Env) {
     const today = new Date().toISOString();
     console.log(`🔄 Daily Rent Calculation Started: ${today}`);
@@ -17,7 +47,7 @@ export async function distributeRent(env: Env) {
 
         // LOGIC EXPLAINED IN SQL:
         // 1. Get Property Data: Price, Yield, Total Tokens.
-        // 2. Gross Annual = Price * (Yield / 100)
+        // 2. Gross Annual = Price * (Yield / 100) * (Occupancy / 100)
         // 3. Net Annual = Gross Annual * (1 - Management Fee)
         // 4. Daily Per Token = (Net Annual / Total Tokens) / 365
         // 5. Add to User: Current Rewards + (User's Token Amount * Daily Per Token)
@@ -29,7 +59,10 @@ export async function distributeRent(env: Env) {
                 unclaimed_rewards = unclaimed_rewards + (
                     token_amount * (
                         SELECT 
-                            ( (price * (rental_yield / 100.0)) * (1.0 - ?) ) / total_tokens / 365.0
+                            ( 
+                                (price_usd * (rental_yield / 100.0) * (occupancy_rate / 100.0)) 
+                                * (1.0 - ?) 
+                            ) / total_tokens / 365.0
                         FROM properties 
                         WHERE properties.id = investments.property_id
                     )

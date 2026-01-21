@@ -26,7 +26,7 @@ import { authMiddleware, requireAuth, adminMiddleware, requireAdmin } from "./li
 import { getErrorMessage, getLangFromRequest } from "./lib/i18n";
 import { generateWasabiAddress, isAddressUnused } from './lib/bitcoin';
 import { processPendingDeposits } from './lib/cron';
-import { distributeRent } from "./scheduled";
+import { distributeRent, updateOccupancyRates } from "./scheduled";
 import { accrueRewardsForAll, accrueRewardsForUser } from "./lib/rewards";
 
 // Environment variables interface
@@ -330,10 +330,10 @@ app.post('/api/deposit', authMiddleware, async (c) => {
 		if (!foundUnused) throw new Error("No suitable unused address found. Please try again later.");
 
 		const result = await c.env.terravest_db.prepare(`
-            INSERT INTO deposits (user_id, amount_usd, address, address_index, status)
-            VALUES (?, ?, ?, ?, 'pending')
-            RETURNING *
-        `).bind(userId, amountNum, btcAddress, finalIndex).first();
+            INSERT INTO deposits (user_id, amount_usd, address, address_index, status)
+            VALUES (?, ?, ?, ?, 'pending')
+            RETURNING *
+        `).bind(userId, amountNum, btcAddress, finalIndex).first();
 
 		if (!result) throw new Error("Database record error");
 
@@ -383,11 +383,11 @@ app.get('/api/deposits', authMiddleware, async (c) => {
 app.get('/api/admin/deposits', authMiddleware, adminMiddleware, async (c) => {
 	try {
 		const { results } = await c.env.terravest_db.prepare(`
-            SELECT d.*, u.username, u.email 
-            FROM deposits d
-            LEFT JOIN users u ON d.user_id = u.id
-            ORDER BY d.created_at DESC
-        `).all();
+            SELECT d.*, u.username, u.email 
+            FROM deposits d
+            LEFT JOIN users u ON d.user_id = u.id
+            ORDER BY d.created_at DESC
+        `).all();
 		return c.json({ success: true, data: results });
 	} catch (e: any) { return c.json({ error: e.message }, 500); }
 });
@@ -433,13 +433,13 @@ app.get('/api/transactions', authMiddleware, async (c) => {
 	const user = c.get('user');
 	try {
 		const { results } = await c.env.terravest_db.prepare(`
-            SELECT 'deposit' as type, id, amount_usd as amount, status, created_at, NULL as tx_hash, address as target_address
-            FROM deposits WHERE user_id = ?
-            UNION ALL
-            SELECT 'withdrawal' as type, id, amount, status, created_at, tx_hash, address as target_address
-            FROM withdrawals WHERE user_id = ?
-            ORDER BY created_at DESC LIMIT 50
-        `).bind(user.id, user.id).all();
+            SELECT 'deposit' as type, id, amount_usd as amount, status, created_at, NULL as tx_hash, address as target_address
+            FROM deposits WHERE user_id = ?
+            UNION ALL
+            SELECT 'withdrawal' as type, id, amount, status, created_at, tx_hash, address as target_address
+            FROM withdrawals WHERE user_id = ?
+            ORDER BY created_at DESC LIMIT 50
+        `).bind(user.id, user.id).all();
 		return c.json({ success: true, data: results });
 	} catch (e: any) { return c.json({ error: e.message }, 500); }
 });
@@ -464,6 +464,9 @@ export default Sentry.withSentry(
 					ctx.waitUntil(processPendingDeposits(env));
 				}
 				else if (cronSchedule === "0 1 * * *") {
+					// Update occupancy rates first
+					ctx.waitUntil(updateOccupancyRates(env));
+					// Then distribute rent based on new rates
 					ctx.waitUntil(distributeRent(env));
 				}
 				else {

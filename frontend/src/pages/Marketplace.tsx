@@ -2,20 +2,25 @@ import { useEffect, useState, useContext } from 'react';
 import Navbar from '../components/Navbar';
 import PropertyCard from '../components/PropertyCard';
 import { api } from '../lib/api';
-import { Search, SlidersHorizontal, Loader2, AlertCircle, X, ArrowDownWideNarrow, ArrowUpNarrowWide, Percent } from 'lucide-react';
+import { Search, SlidersHorizontal, Loader2, AlertCircle, X, Percent } from 'lucide-react';
 import { LanguageContext } from '../App';
 import { content } from '../content';
 
-interface Property {
+export interface Property {
     id: number;
     title: string;
+    description?: string;
     location: string;
-    price_usd: number; // Stored in Cents
+    price_usd: number;      // Cents (Örn: 42000000 -> $420,000)
+    token_price: number;    // Cents
     total_tokens: number;
     available_tokens: number;
     rental_yield: string;
     image_url?: string;
     images?: { url: string }[];
+    status?: string;
+    risk_score?: number;    // YENİ: 1-5 arası
+    occupancy_rate?: number;// YENİ: 0-100 arası
 }
 
 export default function Marketplace() {
@@ -29,7 +34,7 @@ export default function Marketplace() {
         minPrice: '',
         maxPrice: '',
         minYield: '',
-        sortBy: 'newest' // newest, price_asc, price_desc, yield_desc
+        sortBy: 'newest'
     });
 
     const lang = useContext(LanguageContext);
@@ -38,7 +43,12 @@ export default function Marketplace() {
     useEffect(() => {
         async function loadProperties() {
             try {
+                // API'den veriyi çekiyoruz
                 const data = await api.getProperties();
+
+                // Gelen veriyi konsola yazdıralım (Debug için)
+                console.log("📡 Marketplace Loaded:", data);
+
                 if (Array.isArray(data)) {
                     setProperties(data);
                 }
@@ -51,10 +61,9 @@ export default function Marketplace() {
         loadProperties();
     }, []);
 
-    // --- HELPER: Parse Yield String to Number ---
+    // --- HELPER: Parse Yield String ---
     const getYieldValue = (yieldStr: string) => {
         if (!yieldStr) return 0;
-        // "8.5%" -> 8.5, "~12%" -> 12
         const clean = yieldStr.toString().replace(/[^0-9.]/g, '');
         return parseFloat(clean) || 0;
     };
@@ -81,21 +90,15 @@ export default function Marketplace() {
             return matchesSearch && matchesPrice && matchesYield;
         })
         .sort((a, b) => {
-            // Sorting
             switch (filters.sortBy) {
-                case 'price_asc':
-                    return a.price_usd - b.price_usd;
-                case 'price_desc':
-                    return b.price_usd - a.price_usd;
-                case 'yield_desc':
-                    return getYieldValue(b.rental_yield) - getYieldValue(a.rental_yield);
+                case 'price_asc': return a.price_usd - b.price_usd;
+                case 'price_desc': return b.price_usd - a.price_usd;
+                case 'yield_desc': return getYieldValue(b.rental_yield) - getYieldValue(a.rental_yield);
                 case 'newest':
-                default:
-                    return b.id - a.id; // Assuming higher ID is newer
+                default: return b.id - a.id;
             }
         });
 
-    // Reset Filters
     const clearFilters = () => {
         setFilters({ minPrice: '', maxPrice: '', minYield: '', sortBy: 'newest' });
         setSearchTerm('');
@@ -117,7 +120,7 @@ export default function Marketplace() {
                         {t.marketplace.subtitle}
                     </p>
 
-                    {/* Search Bar Wrapper */}
+                    {/* Search Bar */}
                     <div className="max-w-2xl mx-auto relative">
                         <div className="bg-white p-2 rounded-2xl shadow-xl flex items-center gap-2 relative z-20">
                             <div className="bg-slate-100 p-3 rounded-xl text-slate-500">
@@ -139,56 +142,28 @@ export default function Marketplace() {
                             </button>
                         </div>
 
-                        {/* --- EXPANDABLE FILTER PANEL --- */}
+                        {/* Filters Panel */}
                         {showFilters && (
                             <div className="absolute top-full left-0 right-0 mt-4 bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 z-10 animate-in slide-in-from-top-2 fade-in duration-200 text-left">
                                 <div className="grid md:grid-cols-3 gap-6">
-
-                                    {/* Price Range */}
                                     <div>
                                         <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Price Range (USD)</label>
                                         <div className="flex items-center gap-2">
-                                            <input
-                                                type="number"
-                                                placeholder="Min"
-                                                value={filters.minPrice}
-                                                onChange={(e) => setFilters({ ...filters, minPrice: e.target.value })}
-                                                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-800 outline-none focus:ring-2 focus:ring-[#009B9E]"
-                                            />
+                                            <input type="number" placeholder="Min" value={filters.minPrice} onChange={(e) => setFilters({ ...filters, minPrice: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-800 outline-none focus:ring-2 focus:ring-[#009B9E]" />
                                             <span className="text-slate-400">-</span>
-                                            <input
-                                                type="number"
-                                                placeholder="Max"
-                                                value={filters.maxPrice}
-                                                onChange={(e) => setFilters({ ...filters, maxPrice: e.target.value })}
-                                                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-800 outline-none focus:ring-2 focus:ring-[#009B9E]"
-                                            />
+                                            <input type="number" placeholder="Max" value={filters.maxPrice} onChange={(e) => setFilters({ ...filters, maxPrice: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-800 outline-none focus:ring-2 focus:ring-[#009B9E]" />
                                         </div>
                                     </div>
-
-                                    {/* Yield & Sort */}
                                     <div>
                                         <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Min Yield %</label>
                                         <div className="relative">
-                                            <input
-                                                type="number"
-                                                placeholder="e.g. 8"
-                                                value={filters.minYield}
-                                                onChange={(e) => setFilters({ ...filters, minYield: e.target.value })}
-                                                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-800 outline-none focus:ring-2 focus:ring-[#009B9E] pl-9"
-                                            />
+                                            <input type="number" placeholder="e.g. 8" value={filters.minYield} onChange={(e) => setFilters({ ...filters, minYield: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-800 outline-none focus:ring-2 focus:ring-[#009B9E] pl-9" />
                                             <Percent className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
                                         </div>
                                     </div>
-
-                                    {/* Sorting */}
                                     <div>
                                         <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Sort By</label>
-                                        <select
-                                            value={filters.sortBy}
-                                            onChange={(e) => setFilters({ ...filters, sortBy: e.target.value })}
-                                            className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-800 outline-none focus:ring-2 focus:ring-[#009B9E] appearance-none"
-                                        >
+                                        <select value={filters.sortBy} onChange={(e) => setFilters({ ...filters, sortBy: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-800 outline-none focus:ring-2 focus:ring-[#009B9E] appearance-none">
                                             <option value="newest">Newest Listed</option>
                                             <option value="price_asc">Price: Low to High</option>
                                             <option value="price_desc">Price: High to Low</option>
@@ -196,17 +171,9 @@ export default function Marketplace() {
                                         </select>
                                     </div>
                                 </div>
-
                                 <div className="mt-6 flex justify-between items-center border-t border-slate-100 pt-4">
-                                    <button
-                                        onClick={clearFilters}
-                                        className="text-slate-400 text-sm hover:text-red-500 font-medium transition-colors"
-                                    >
-                                        Clear All Filters
-                                    </button>
-                                    <div className="text-slate-500 text-sm font-bold">
-                                        Showing {filteredProperties.length} Properties
-                                    </div>
+                                    <button onClick={clearFilters} className="text-slate-400 text-sm hover:text-red-500 font-medium transition-colors">Clear All Filters</button>
+                                    <div className="text-slate-500 text-sm font-bold">Showing {filteredProperties.length} Properties</div>
                                 </div>
                             </div>
                         )}
@@ -233,12 +200,7 @@ export default function Marketplace() {
                         </div>
                         <h3 className="text-xl font-bold text-[#0F172A] mb-2">{t.marketplace.noResults}</h3>
                         <p className="text-slate-500 mb-6">{t.marketplace.noResultsSubtitle}</p>
-                        <button
-                            onClick={clearFilters}
-                            className="text-[#009B9E] font-bold hover:underline"
-                        >
-                            Clear filters & search
-                        </button>
+                        <button onClick={clearFilters} className="text-[#009B9E] font-bold hover:underline">Clear filters & search</button>
                     </div>
                 )}
             </div>

@@ -22,6 +22,12 @@ const PropertyDetails = lazy(() => import('./pages/PropertyDetails'));
 const Learn = lazy(() => import('./pages/Learn'));
 const About = lazy(() => import('./pages/About'));
 
+// NEW LEGAL & CONTACT PAGES (Lazy Load)
+const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
+const TermsOfService = lazy(() => import('./pages/TermsOfService'));
+const Disclaimer = lazy(() => import('./pages/Disclaimer'));
+const Contact = lazy(() => import('./pages/Contact'));
+
 // PAGES (Admin) - Lazy Load
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
 const AdminWithdrawals = lazy(() => import('./pages/admin/AdminWithdrawals'));
@@ -31,14 +37,6 @@ const Properties = lazy(() => import('./pages/admin/Properties'));
 const PageLoader = () => (
   <div className="min-h-screen flex items-center justify-center bg-[#0F172A]">
     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00E5FF]"></div>
-  </div>
-);
-
-const LegalPlaceholder = ({ title }: { title: string }) => (
-  <div className="min-h-screen bg-[#F9F7F3] flex flex-col items-center justify-center p-4">
-    <h1 className="text-3xl font-bold text-slate-800 mb-4">{title}</h1>
-    <p className="text-slate-500">This page is under construction.</p>
-    <a href="/" className="mt-6 text-[#009B9E] hover:underline">Go Home</a>
   </div>
 );
 
@@ -68,10 +66,11 @@ export function AppRoutes({ lang }: AppRoutesProps) {
           <Route path="about" element={<About />} />
           <Route path="learn" element={<Learn />} />
 
-          <Route path="/privacy-policy" element={<LegalPlaceholder title="Privacy Policy" />} />
-          <Route path="/terms-of-service" element={<LegalPlaceholder title="Terms of Service" />} />
-          <Route path="/disclaimer" element={<LegalPlaceholder title="Disclaimer" />} />
-          <Route path="/contact" element={<LegalPlaceholder title="Contact Us" />} />
+          {/* LEGAL & CONTACT ROUTES */}
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="/terms-of-service" element={<TermsOfService />} />
+          <Route path="/disclaimer" element={<Disclaimer />} />
+          <Route path="/contact" element={<Contact />} />
 
           {/* USER DASHBOARD */}
           <Route path="dashboard" element={<Dashboard />} />

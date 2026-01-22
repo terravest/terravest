@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useContext } from 'react';
 import { LanguageContext } from '../App';
 import { content } from '../content';
+import Footer from '../components/Footer';
 
 export default function Home() {
     const { user } = useAuth();
@@ -160,6 +161,7 @@ export default function Home() {
                     </div>
                 </div>
             </section>
+            <Footer />
         </div>
     );
 }

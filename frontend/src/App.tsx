@@ -34,6 +34,14 @@ const PageLoader = () => (
   </div>
 );
 
+const LegalPlaceholder = ({ title }: { title: string }) => (
+  <div className="min-h-screen bg-[#F9F7F3] flex flex-col items-center justify-center p-4">
+    <h1 className="text-3xl font-bold text-slate-800 mb-4">{title}</h1>
+    <p className="text-slate-500">This page is under construction.</p>
+    <a href="/" className="mt-6 text-[#009B9E] hover:underline">Go Home</a>
+  </div>
+);
+
 export const LanguageContext = createContext<LangType>('en');
 
 type AppRoutesProps = {
@@ -59,6 +67,11 @@ export function AppRoutes({ lang }: AppRoutesProps) {
 
           <Route path="about" element={<About />} />
           <Route path="learn" element={<Learn />} />
+
+          <Route path="/privacy-policy" element={<LegalPlaceholder title="Privacy Policy" />} />
+          <Route path="/terms-of-service" element={<LegalPlaceholder title="Terms of Service" />} />
+          <Route path="/disclaimer" element={<LegalPlaceholder title="Disclaimer" />} />
+          <Route path="/contact" element={<LegalPlaceholder title="Contact Us" />} />
 
           {/* USER DASHBOARD */}
           <Route path="dashboard" element={<Dashboard />} />

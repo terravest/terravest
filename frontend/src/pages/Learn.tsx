@@ -21,6 +21,7 @@ import {
 import { useContext } from 'react';
 import { LanguageContext } from '../App';
 import { content } from '../content';
+import Footer from '../components/Footer';
 
 export default function Learn() {
     const lang = useContext(LanguageContext);
@@ -183,6 +184,7 @@ export default function Learn() {
                     </Link>
                 </div>
             </section>
+            <Footer />
         </div>
     );
 }

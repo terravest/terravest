@@ -4,6 +4,7 @@ import { Layers, Globe, ShieldCheck, ArrowRight } from 'lucide-react';
 import { useContext } from 'react';
 import { LanguageContext } from '../App';
 import { content } from '../content';
+import Footer from '../components/Footer';
 
 export default function About() {
     const lang = useContext(LanguageContext);
@@ -126,6 +127,7 @@ export default function About() {
                     {t.about.legalDisclosure}
                 </p>
             </section>
+            <Footer />
         </div>
     );
 }

@@ -5,6 +5,7 @@ import { api } from '../lib/api';
 import { Search, SlidersHorizontal, Loader2, AlertCircle, X, Percent, ChevronDown } from 'lucide-react';
 import { LanguageContext } from '../App';
 import { content } from '../content';
+import Footer from '../components/Footer';
 
 export interface Property {
     id: number;
@@ -115,7 +116,7 @@ export default function Marketplace() {
     };
 
     return (
-        <div className="min-h-screen bg-[#F9F7F3] font-sans">
+        <div className="min-h-screen bg-[#F9F7F3] font-sans flex flex-col">
             <Navbar />
 
             {/* Header & Search */}
@@ -279,6 +280,7 @@ export default function Marketplace() {
                     </div>
                 )}
             </div>
+            <Footer />
         </div>
     );
 }

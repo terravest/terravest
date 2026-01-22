@@ -1,8 +1,14 @@
+import { useContext } from 'react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { Mail, MapPin, MessageSquare } from 'lucide-react';
+import { LanguageContext } from '../App';
+import { content } from '../content';
 
 export default function Contact() {
+    const lang = useContext(LanguageContext);
+    const t = content[lang].contactPage;
+
     return (
         <div className="min-h-screen bg-[#F9F7F3] font-sans flex flex-col">
             <Navbar />
@@ -12,10 +18,9 @@ export default function Contact() {
 
                     {/* Sol Taraf: İletişim Bilgileri */}
                     <div>
-                        <h1 className="text-4xl md:text-5xl font-black text-[#0F172A] mb-6">Contact Us</h1>
+                        <h1 className="text-4xl md:text-5xl font-black text-[#0F172A] mb-6">{t.title}</h1>
                         <p className="text-slate-600 text-lg mb-12 leading-relaxed">
-                            Have questions about real estate tokenization, our platform, or investment opportunities?
-                            Our team is ready to assist you.
+                            {t.subtitle}
                         </p>
 
                         <div className="space-y-8">
@@ -24,8 +29,8 @@ export default function Contact() {
                                     <Mail size={24} />
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-[#0F172A] text-lg mb-1">Email Support</h3>
-                                    <p className="text-slate-500 text-sm mb-2">For general inquiries and support:</p>
+                                    <h3 className="font-bold text-[#0F172A] text-lg mb-1">{t.emailTitle}</h3>
+                                    <p className="text-slate-500 text-sm mb-2">{t.emailDesc}</p>
                                     <a href="mailto:support@terravest.homes" className="text-[#009B9E] font-bold hover:underline text-lg">
                                         support@terravest.homes
                                     </a>
@@ -37,11 +42,9 @@ export default function Contact() {
                                     <MessageSquare size={24} />
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-[#0F172A] text-lg mb-1">Live Chat</h3>
+                                    <h3 className="font-bold text-[#0F172A] text-lg mb-1">{t.chatTitle}</h3>
                                     <p className="text-slate-500 text-sm">
-                                        Available weekdays from 9am to 6pm EST.
-                                        <br />
-                                        Click the chat icon in the bottom right corner.
+                                        {t.chatDesc}
                                     </p>
                                 </div>
                             </div>
@@ -51,11 +54,9 @@ export default function Contact() {
                                     <MapPin size={24} />
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-[#0F172A] text-lg mb-1">Office</h3>
+                                    <h3 className="font-bold text-[#0F172A] text-lg mb-1">{t.officeTitle}</h3>
                                     <p className="text-slate-500 text-sm">
-                                        TerraVest HQ<br />
-                                        100 Biscayne Blvd, Suite 1200<br />
-                                        Miami, FL 33132
+                                        {t.officeDesc}
                                     </p>
                                 </div>
                             </div>
@@ -64,26 +65,26 @@ export default function Contact() {
 
                     {/* Sağ Taraf: İletişim Formu */}
                     <div className="bg-white rounded-3xl shadow-xl border border-slate-100 p-8 md:p-10">
-                        <h3 className="text-2xl font-bold text-[#0F172A] mb-6">Send us a message</h3>
+                        <h3 className="text-2xl font-bold text-[#0F172A] mb-6">{t.formTitle}</h3>
                         <form className="space-y-5" onSubmit={(e) => e.preventDefault()}>
                             <div className="grid md:grid-cols-2 gap-5">
                                 <div>
-                                    <label className="block text-sm font-bold text-slate-700 mb-2">First Name</label>
-                                    <input type="text" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-[#009B9E] transition-all" placeholder="Jane" />
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">{t.form.firstName}</label>
+                                    <input type="text" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-[#009B9E] transition-all" />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-bold text-slate-700 mb-2">Last Name</label>
-                                    <input type="text" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-[#009B9E] transition-all" placeholder="Doe" />
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">{t.form.lastName}</label>
+                                    <input type="text" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-[#009B9E] transition-all" />
                                 </div>
                             </div>
 
                             <div>
-                                <label className="block text-sm font-bold text-slate-700 mb-2">Email Address</label>
-                                <input type="email" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-[#009B9E] transition-all" placeholder="jane@example.com" />
+                                <label className="block text-sm font-bold text-slate-700 mb-2">{t.form.email}</label>
+                                <input type="email" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-[#009B9E] transition-all" />
                             </div>
 
                             <div>
-                                <label className="block text-sm font-bold text-slate-700 mb-2">Subject</label>
+                                <label className="block text-sm font-bold text-slate-700 mb-2">{t.form.subject}</label>
                                 <select className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-[#009B9E] transition-all text-slate-600">
                                     <option>General Inquiry</option>
                                     <option>Investment Support</option>
@@ -93,12 +94,12 @@ export default function Contact() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-bold text-slate-700 mb-2">Message</label>
-                                <textarea className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 h-32 outline-none focus:ring-2 focus:ring-[#009B9E] transition-all resize-none" placeholder="Tell us how we can help..."></textarea>
+                                <label className="block text-sm font-bold text-slate-700 mb-2">{t.form.message}</label>
+                                <textarea className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 h-32 outline-none focus:ring-2 focus:ring-[#009B9E] transition-all resize-none"></textarea>
                             </div>
 
                             <button className="w-full bg-[#009B9E] hover:bg-[#008B8E] text-white font-bold py-4 rounded-xl transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-1">
-                                Send Message
+                                {t.form.submit}
                             </button>
                         </form>
                     </div>

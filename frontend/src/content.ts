@@ -63,7 +63,6 @@ type Content = {
     heroCtaPrimary: string;
     heroCtaSecondary: string;
     heroBackgroundAlt: string;
-    // --- YENİ EKLENEN KISIMLAR (Home.tsx için gerekli) ---
     stats: {
       value: string;
       investors: string;
@@ -196,6 +195,13 @@ type Content = {
     toastInvalidBtc: string;
     toastWithdrawRequest: string;
   };
+  footer: {
+    disclaimerText: string;
+    privacy: string;
+    terms: string;
+    disclaimer: string;
+    contact: string;
+  };
   transactionHistory: {
     title: string;
     refreshTitle: string;
@@ -322,6 +328,45 @@ type Content = {
     email_verification_login: string;
     email_not_verified_error: string;
   };
+  legal: {
+    lastUpdated: string;
+    privacy: {
+      title: string;
+      intro: string;
+      sections: Array<{ title: string; content: string | string[] }>;
+    };
+    terms: {
+      title: string;
+      intro: string;
+      sections: Array<{ title: string; content: string }>;
+    };
+    disclaimer: {
+      title: string;
+      introBox: string;
+      introText: string;
+      bullets: string[];
+      closing: string;
+    };
+  };
+  contactPage: {
+    title: string;
+    subtitle: string;
+    emailTitle: string;
+    emailDesc: string;
+    chatTitle: string;
+    chatDesc: string;
+    officeTitle: string;
+    officeDesc: string;
+    formTitle: string;
+    form: {
+      firstName: string;
+      lastName: string;
+      email: string;
+      subject: string;
+      message: string;
+      submit: string;
+    };
+  };
   propertyDetails: {
     notFound: string;
     backToMarketplace: string;
@@ -439,7 +484,6 @@ export const content: Record<LangType, Content> = {
       heroCtaPrimary: 'View Properties',
       heroCtaSecondary: 'Create Account',
       heroBackgroundAlt: 'City skyline background',
-      // --- ENGLISH HOME DETAILS ---
       stats: {
         value: "Property Value",
         investors: "Investors",
@@ -679,6 +723,13 @@ export const content: Record<LangType, Content> = {
       toastInvalidBtc: 'Invalid BTC address',
       toastWithdrawRequest: 'Withdrawal request submitted! Pending Admin Approval.',
     },
+    footer: {
+      disclaimerText: 'This website is provided for informational purposes only and does not constitute an offer to sell or a solicitation to buy any securities or investment products. Past performance is not indicative of future results.',
+      privacy: 'Privacy Policy',
+      terms: 'Terms of Service',
+      disclaimer: 'Disclaimer',
+      contact: 'Contact',
+    },
     transactionHistory: {
       title: 'Transaction History',
       refreshTitle: 'Refresh',
@@ -810,6 +861,59 @@ export const content: Record<LangType, Content> = {
       email_verification_expired: 'Verification link is invalid or expired.',
       email_verification_login: 'Go to login',
       email_not_verified_error: 'Please verify your email before logging in.',
+    },
+    legal: {
+      lastUpdated: 'Last updated: January 21, 2026',
+      privacy: {
+        title: 'Privacy Policy',
+        intro: 'TerraVest ("TerraVest", "we", "us", or "our") respects your privacy and is committed to protecting the personal information you share with us through our website and services.',
+        sections: [
+          { title: '1. Information We Collect', content: ['Email address', 'Name and basic contact details', 'Account registration information', 'Technical data (IP, browser, device)'] },
+          { title: '2. How We Use Your Information', content: ['Provide access to our platform', 'Communicate regarding updates', 'Respond to inquiries', 'Improve our services', 'Comply with legal requirements'] },
+          { title: '3. Data Security', content: 'We implement reasonable administrative and technical safeguards to protect your information.' },
+          { title: '4. Your Rights', content: ['Access, correct, or delete your data', 'Withdraw consent', 'Request information about processing'] }
+        ]
+      },
+      terms: {
+        title: 'Terms of Service',
+        intro: 'By accessing or using the TerraVest website or services, you agree to the following Terms of Service.',
+        sections: [
+          { title: '1. Platform Purpose', content: 'TerraVest provides a technology platform designed to present informational content related to tokenized real estate. Nothing on this website constitutes legal, financial, tax, or investment advice.' },
+          { title: '2. Eligibility', content: 'You are responsible for ensuring that your use of TerraVest complies with the laws and regulations applicable in your jurisdiction.' },
+          { title: '3. No Investment Offer', content: 'TerraVest does not offer securities or act as a broker, dealer, or investment advisor on this platform.' },
+          { title: '4. Limitation of Liability', content: 'TerraVest shall not be liable for any indirect, incidental, or consequential damages arising from your use of the platform.' }
+        ]
+      },
+      disclaimer: {
+        title: 'General Disclaimer',
+        introBox: 'The information provided on TerraVest is for educational and informational purposes only.',
+        introText: 'The content on this website does not constitute investment, financial, legal, or tax advice.',
+        bullets: [
+          'No Investment Advice: Seek professional consultation.',
+          'Risk Warning: Real estate tokenization involves high risk.',
+          'No Guarantees: Past performance is not indicative of future results.'
+        ],
+        closing: 'You should consult your own legal, tax, and financial advisors before making any investment decisions.'
+      }
+    },
+    contactPage: {
+      title: 'Contact Us',
+      subtitle: 'Have questions about real estate tokenization? Our team is here to help.',
+      emailTitle: 'Email Support',
+      emailDesc: 'For general inquiries and support:',
+      chatTitle: 'Live Chat',
+      chatDesc: 'Available weekdays from 9am to 6pm EST.',
+      officeTitle: 'Office',
+      officeDesc: '100 Biscayne Blvd, Miami, FL 33132',
+      formTitle: 'Send us a message',
+      form: {
+        firstName: 'First Name',
+        lastName: 'Last Name',
+        email: 'Email Address',
+        subject: 'Subject',
+        message: 'Message',
+        submit: 'Send Message'
+      }
     },
     propertyDetails: {
       notFound: 'Property not found.',
@@ -1166,6 +1270,13 @@ export const content: Record<LangType, Content> = {
       toastInvalidBtc: 'Endereço BTC inválido',
       toastWithdrawRequest: 'Solicitação de saque enviada! Aguardando aprovação.',
     },
+    footer: {
+      disclaimerText: 'Este site é fornecido apenas para fins informativos e não constitui uma oferta de venda ou uma solicitação de compra de quaisquer valores mobiliários ou produtos de investimento. O desempenho passado não é indicativo de resultados futuros.',
+      privacy: 'Política de Privacidade',
+      terms: 'Termos de Serviço',
+      disclaimer: 'Aviso Legal',
+      contact: 'Contato',
+    },
     transactionHistory: {
       title: 'Histórico de Transações',
       refreshTitle: 'Atualizar',
@@ -1297,6 +1408,59 @@ export const content: Record<LangType, Content> = {
       email_verification_expired: 'O link de verificação é inválido ou expirou.',
       email_verification_login: 'Ir para login',
       email_not_verified_error: 'Verifique seu e-mail antes de entrar.',
+    },
+    legal: {
+      lastUpdated: 'Última atualização: 21 de Janeiro de 2026',
+      privacy: {
+        title: 'Política de Privacidade',
+        intro: 'A TerraVest ("nós", "nosso") respeita sua privacidade e compromete-se a proteger as informações pessoais que você compartilha conosco.',
+        sections: [
+          { title: '1. Informações que Coletamos', content: ['Endereço de e-mail', 'Nome e dados básicos', 'Informações de registro', 'Dados técnicos (IP, navegador)'] },
+          { title: '2. Como Usamos', content: ['Fornecer acesso à plataforma', 'Comunicar atualizações', 'Responder a solicitações', 'Melhorar serviços', 'Cumprir requisitos legais'] },
+          { title: '3. Segurança de Dados', content: 'Implementamos salvaguardas administrativas e técnicas razoáveis para proteger suas informações.' },
+          { title: '4. Seus Direitos', content: ['Acessar, corrigir ou excluir dados', 'Retirar consentimento', 'Solicitar informações sobre processamento'] }
+        ]
+      },
+      terms: {
+        title: 'Termos de Serviço',
+        intro: 'Ao acessar ou usar os serviços da TerraVest, você concorda com os seguintes Termos de Serviço.',
+        sections: [
+          { title: '1. Propósito da Plataforma', content: 'A TerraVest fornece uma plataforma tecnológica para apresentar conteúdo informativo sobre imóveis tokenizados. Nada neste site constitui aconselhamento jurídico ou financeiro.' },
+          { title: '2. Elegibilidade', content: 'Você é responsável por garantir que seu uso da TerraVest esteja em conformidade com as leis de sua jurisdição.' },
+          { title: '3. Nenhuma Oferta de Investimento', content: 'A TerraVest não oferece valores mobiliários nem atua como corretora ou consultora de investimentos nesta plataforma.' },
+          { title: '4. Limitação de Responsabilidade', content: 'A TerraVest não será responsável por danos indiretos ou consequentes decorrentes do uso da plataforma.' }
+        ]
+      },
+      disclaimer: {
+        title: 'Aviso Legal Geral',
+        introBox: 'As informações fornecidas na TerraVest são apenas para fins educacionais e informativos.',
+        introText: 'O conteúdo deste site não constitui aconselhamento de investimento, financeiro, jurídico ou fiscal.',
+        bullets: [
+          'Sem Aconselhamento: Busque consultoria profissional.',
+          'Aviso de Risco: Tokenização envolve alto risco.',
+          'Sem Garantias: Desempenho passado não indica resultados futuros.'
+        ],
+        closing: 'Você deve consultar seus próprios consultores jurídicos e financeiros antes de tomar decisões.'
+      }
+    },
+    contactPage: {
+      title: 'Fale Conosco',
+      subtitle: 'Dúvidas sobre tokenização imobiliária? Nossa equipe está aqui para ajudar.',
+      emailTitle: 'Suporte por E-mail',
+      emailDesc: 'Para dúvidas gerais e suporte:',
+      chatTitle: 'Chat Ao Vivo',
+      chatDesc: 'Disponível dias úteis das 9h às 18h EST.',
+      officeTitle: 'Escritório',
+      officeDesc: '100 Biscayne Blvd, Miami, FL 33132',
+      formTitle: 'Envie uma mensagem',
+      form: {
+        firstName: 'Nome',
+        lastName: 'Sobrenome',
+        email: 'Endereço de E-mail',
+        subject: 'Assunto',
+        message: 'Mensagem',
+        submit: 'Enviar Mensagem'
+      }
     },
     propertyDetails: {
       notFound: 'Imóvel não encontrado.',
@@ -1653,6 +1817,13 @@ export const content: Record<LangType, Content> = {
       toastInvalidBtc: 'Dirección BTC invalida',
       toastWithdrawRequest: 'Solicitud de retiro enviada! Pendiente de aprobación.',
     },
+    footer: {
+      disclaimerText: 'Este sitio web se proporciona solo con fines informativos y no constituye una oferta de venta ni una solicitud de compra de valores o productos de inversión. El rendimiento pasado no es indicativo de resultados futuros.',
+      privacy: 'Política de Privacidad',
+      terms: 'Términos de Servicio',
+      disclaimer: 'Aviso Legal',
+      contact: 'Contacto',
+    },
     transactionHistory: {
       title: 'Historial de Transacciones',
       refreshTitle: 'Actualizar',
@@ -1785,6 +1956,59 @@ export const content: Record<LangType, Content> = {
       email_verification_expired: 'El enlace de verificación es inválido o venció.',
       email_verification_login: 'Ir a iniciar sesión',
       email_not_verified_error: 'Verifica tu correo antes de iniciar sesión.',
+    },
+    legal: {
+      lastUpdated: 'Última actualización: 21 de Enero de 2026',
+      privacy: {
+        title: 'Política de Privacidad',
+        intro: 'TerraVest ("nosotros", "nuestro") respeta su privacidad y se compromete a proteger la información personal que comparte con nosotros.',
+        sections: [
+          { title: '1. Información que Recopilamos', content: ['Correo electrónico', 'Nombre y datos básicos', 'Información de registro', 'Datos técnicos (IP, navegador)'] },
+          { title: '2. Cómo la Usamos', content: ['Proporcionar acceso a la plataforma', 'Comunicar actualizaciones', 'Responder consultas', 'Mejorar servicios', 'Cumplir requisitos legales'] },
+          { title: '3. Seguridad de Datos', content: 'Implementamos salvaguardas administrativas y técnicas razonables para proteger su información.' },
+          { title: '4. Sus Derechos', content: ['Acceder, corregir o eliminar datos', 'Retirar consentimiento', 'Solicitar información de procesamiento'] }
+        ]
+      },
+      terms: {
+        title: 'Términos de Servicio',
+        intro: 'Al acceder o utilizar los servicios de TerraVest, acepta los siguientes Términos de Servicio.',
+        sections: [
+          { title: '1. Propósito de la Plataforma', content: 'TerraVest proporciona una plataforma tecnológica para contenido informativo sobre bienes raíces tokenizados. Nada aquí constituye asesoramiento legal o financiero.' },
+          { title: '2. Elegibilidad', content: 'Usted es responsable de garantizar que su uso de TerraVest cumpla con las leyes de su jurisdicción.' },
+          { title: '3. Sin Oferta de Inversión', content: 'TerraVest no ofrece valores ni actúa como corredor o asesor de inversiones en esta plataforma.' },
+          { title: '4. Limitación de Responsabilidad', content: 'TerraVest no será responsable de daños indirectos o consecuentes derivados de su uso de la plataforma.' }
+        ]
+      },
+      disclaimer: {
+        title: 'Aviso Legal General',
+        introBox: 'La información en TerraVest es solo para fines educativos e informativos.',
+        introText: 'El contenido de este sitio no constituye asesoramiento de inversión, financiero, legal o fiscal.',
+        bullets: [
+          'Sin Asesoramiento: Busque consulta profesional.',
+          'Advertencia de Riesgo: La tokenización implica alto riesgo.',
+          'Sin Garantías: El rendimiento pasado no indica resultados futuros.'
+        ],
+        closing: 'Debe consultar a sus propios asesores legales y financieros antes de tomar decisiones.'
+      }
+    },
+    contactPage: {
+      title: 'Contáctenos',
+      subtitle: '¿Preguntas sobre tokenización? Nuestro equipo está aquí para ayudar.',
+      emailTitle: 'Soporte por Correo',
+      emailDesc: 'Para consultas generales y soporte:',
+      chatTitle: 'Chat en Vivo',
+      chatDesc: 'Disponible días hábiles de 9h a 18h EST.',
+      officeTitle: 'Oficina',
+      officeDesc: '100 Biscayne Blvd, Miami, FL 33132',
+      formTitle: 'Envíanos un mensaje',
+      form: {
+        firstName: 'Nombre',
+        lastName: 'Apellido',
+        email: 'Correo Electrónico',
+        subject: 'Asunto',
+        message: 'Mensaje',
+        submit: 'Enviar Mensaje'
+      }
     },
     propertyDetails: {
       notFound: 'Propiedad no encontrada.',
@@ -2141,6 +2365,13 @@ export const content: Record<LangType, Content> = {
       toastInvalidBtc: 'Adresse BTC invalide',
       toastWithdrawRequest: 'Demande de retrait envoyee ! En attente de validation.',
     },
+    footer: {
+      disclaimerText: 'Ce site web est fourni à titre informatif uniquement et ne constitue pas une offre de vente ou une sollicitation d\'achat de titres ou de produits d\'investissement. Les performances passées ne préjugent pas des résultats futurs.',
+      privacy: 'Politique de Confidentialité',
+      terms: 'Conditions d\'Utilisation',
+      disclaimer: 'Avis Légal',
+      contact: 'Contact',
+    },
     transactionHistory: {
       title: 'Historique des Transactions',
       refreshTitle: 'Rafraîchir',
@@ -2273,6 +2504,59 @@ export const content: Record<LangType, Content> = {
       email_verification_expired: 'Le lien de vérification est invalide ou expiré.',
       email_verification_login: 'Aller à la connexion',
       email_not_verified_error: 'Veuillez vérifier votre e-mail avant de vous connecter.',
+    },
+    legal: {
+      lastUpdated: 'Dernière mise à jour : 21 Janvier 2026',
+      privacy: {
+        title: 'Politique de Confidentialité',
+        intro: 'TerraVest (« nous », « notre ») respecte votre vie privée et s\'engage à protéger les données personnelles que vous partagez avec nous.',
+        sections: [
+          { title: '1. Informations Collectées', content: ['Adresse e-mail', 'Nom et coordonnées', 'Informations de compte', 'Données techniques (IP, navigateur)'] },
+          { title: '2. Utilisation', content: ['Fournir l\'accès à la plateforme', 'Communiquer les mises à jour', 'Répondre aux demandes', 'Améliorer les services', 'Conformité légale'] },
+          { title: '3. Sécurité des Données', content: 'Nous mettons en œuvre des mesures de sécurité administratives et techniques raisonnables.' },
+          { title: '4. Vos Droits', content: ['Accéder, corriger ou supprimer des données', 'Retirer le consentement', 'Demander des infos sur le traitement'] }
+        ]
+      },
+      terms: {
+        title: 'Conditions d\'Utilisation',
+        intro: 'En accédant ou en utilisant les services TerraVest, vous acceptez les conditions suivantes.',
+        sections: [
+          { title: '1. But de la Plateforme', content: 'TerraVest fournit une plateforme technologique pour présenter du contenu sur l\'immobilier tokenisé. Rien ici ne constitue un conseil juridique ou financier.' },
+          { title: '2. Éligibilité', content: 'Vous êtes responsable de vous assurer que votre utilisation est conforme aux lois de votre juridiction.' },
+          { title: '3. Aucune Offre d\'Investissement', content: 'TerraVest n\'offre pas de titres et n\'agit pas comme courtier ou conseiller en investissement sur cette plateforme.' },
+          { title: '4. Limitation de Responsabilité', content: 'TerraVest ne sera pas responsable des dommages indirects ou consécutifs découlant de votre utilisation.' }
+        ]
+      },
+      disclaimer: {
+        title: 'Avis Légal Général',
+        introBox: 'Les informations fournies sur TerraVest sont uniquement à des fins éducatives et informatives.',
+        introText: 'Le contenu de ce site ne constitue pas un conseil en investissement, financier, juridique ou fiscal.',
+        bullets: [
+          'Pas de Conseil : Consultez un professionnel.',
+          'Risque : La tokenisation implique un risque élevé.',
+          'Pas de Garanties : Les performances passées ne préjugent pas des résultats futurs.'
+        ],
+        closing: 'Vous devez consulter vos propres conseillers juridiques et financiers avant de prendre des décisions.'
+      }
+    },
+    contactPage: {
+      title: 'Contactez-nous',
+      subtitle: 'Des questions sur la tokenisation ? Notre équipe est là pour vous aider.',
+      emailTitle: 'Support Email',
+      emailDesc: 'Pour les demandes générales :',
+      chatTitle: 'Chat en Direct',
+      chatDesc: 'Disponible en semaine de 9h à 18h EST.',
+      officeTitle: 'Bureau',
+      officeDesc: '100 Biscayne Blvd, Miami, FL 33132',
+      formTitle: 'Envoyez-nous un message',
+      form: {
+        firstName: 'Prénom',
+        lastName: 'Nom',
+        email: 'Adresse E-mail',
+        subject: 'Sujet',
+        message: 'Message',
+        submit: 'Envoyer le Message'
+      }
     },
     propertyDetails: {
       notFound: 'Bien introuvable.',

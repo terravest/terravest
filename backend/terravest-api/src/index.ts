@@ -40,6 +40,9 @@ export interface Env {
 	FRONTEND_URL?: string;
 	ENVIRONMENT?: string;
 	NODE_ENV?: string;
+	MAILGUN_API_KEY: string;
+	MAILGUN_DOMAIN: string;
+	MAILGUN_FROM_EMAIL: string;
 }
 
 // Context variables interface

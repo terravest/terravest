@@ -1,29 +1,38 @@
 import { Link } from 'react-router-dom';
+import { useContext } from 'react';
+import { LanguageContext } from '../App';
+import { content } from '../content';
 
 export default function Footer() {
     const currentYear = new Date().getFullYear();
+    const lang = useContext(LanguageContext);
+    const t = content[lang];
+
+    const getLink = (path: string) => {
+        const normalized = path.startsWith('/') ? path : `/${path}`;
+        if (lang === 'en') return normalized;
+        return normalized === '/' ? `/${lang}` : `/${lang}${normalized}`;
+    };
 
     return (
         <footer className="bg-[#0F172A] text-slate-400 py-12 px-4 border-t border-slate-800 mt-auto">
             <div className="container mx-auto max-w-6xl text-center">
-                {/* Yasal Uyarı Metni */}
                 <p className="text-sm md:text-base mb-8 max-w-4xl mx-auto leading-relaxed opacity-80">
-                    This website is provided for informational purposes only and does not constitute an offer to sell or a solicitation to buy any securities or investment products. Past performance is not indicative of future results.
+                    {t.footer.disclaimerText}
                 </p>
 
-                {/* Linkler */}
                 <div className="flex flex-wrap justify-center gap-6 md:gap-12 mb-8 text-sm font-semibold tracking-wide">
-                    <Link to="/privacy-policy" className="hover:text-[#009B9E] transition-colors">
-                        Privacy Policy
+                    <Link to={getLink('/privacy-policy')} className="hover:text-[#009B9E] transition-colors">
+                        {t.footer.privacy}
                     </Link>
-                    <Link to="/terms-of-service" className="hover:text-[#009B9E] transition-colors">
-                        Terms of Service
+                    <Link to={getLink('/terms-of-service')} className="hover:text-[#009B9E] transition-colors">
+                        {t.footer.terms}
                     </Link>
-                    <Link to="/disclaimer" className="hover:text-[#009B9E] transition-colors">
-                        Disclaimer
+                    <Link to={getLink('/disclaimer')} className="hover:text-[#009B9E] transition-colors">
+                        {t.footer.disclaimer}
                     </Link>
-                    <Link to="/contact" className="hover:text-[#009B9E] transition-colors">
-                        Contact
+                    <Link to={getLink('/contact')} className="hover:text-[#009B9E] transition-colors">
+                        {t.footer.contact}
                     </Link>
                 </div>
 

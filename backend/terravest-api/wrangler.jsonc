@@ -15,7 +15,9 @@
 	"vars": {
 		"ENVIRONMENT": "production",
 		"FRONTEND_URL": "https://terravest.homes",
-		"VITE_API_URL": "https://api.terravest.homes/api"
+		"VITE_API_URL": "https://api.terravest.homes/api",
+		"MAILGUN_DOMAIN": "accounts.terravest.homes",
+		"MAILGUN_FROM_EMAIL": "TerraVest <verify@accounts.terravest.homes>"
 	},
 	// ==========================================
 	// 🗄️ D1 DATABASE

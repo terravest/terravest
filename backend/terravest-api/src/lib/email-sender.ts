@@ -1,36 +1,54 @@
-import type { Lang } from './i18n';
+import { Env } from "../index";
 
-type EmailContent = {
+export interface EmailOptions {
+	to: string;
 	subject: string;
-	body: string;
-};
+	html: string;
+}
 
-const EMAIL_TEMPLATES: Record<Lang, EmailContent> = {
-	en: {
-		subject: 'Verify your TerraVest email',
-		body: 'Please verify your email by clicking the link below.'
-	},
-	'es-419': {
-		subject: 'Verifica tu correo de TerraVest',
-		body: 'Verifica tu correo haciendo clic en el enlace de abajo.'
-	},
-	'pt-BR': {
-		subject: 'Verifique seu e-mail da TerraVest',
-		body: 'Verifique seu e-mail clicando no link abaixo.'
-	},
-	fr: {
-		subject: 'Vérifiez votre e-mail TerraVest',
-		body: 'Veuillez vérifier votre e-mail en cliquant sur le lien ci-dessous.'
+export async function sendEmail(env: Env, options: EmailOptions): Promise<boolean> {
+	const { to, subject, html } = options;
+
+	if (!env.MAILGUN_API_KEY || !env.MAILGUN_DOMAIN) {
+		console.error("❌ Mailgun configuration missing. Check .dev.vars or wrangler.jsonc");
+		return false;
 	}
-};
 
-export function sendEmailVerificationPlaceholder(email: string, verificationUrl: string, language: Lang) {
-	const template = EMAIL_TEMPLATES[language] || EMAIL_TEMPLATES.en;
+	try {
+		const formData = new FormData();
 
-	// TODO: Replace with SMTP provider integration.
-	console.log('[EMAIL VERIFICATION PLACEHOLDER]');
-	console.log(`To: ${email}`);
-	console.log(`Subject: ${template.subject}`);
-	console.log(`${template.body}`);
-	console.log(`Verification URL: ${verificationUrl}`);
+		const fromEmail = env.MAILGUN_FROM_EMAIL || `TerraVest <noreply@${env.MAILGUN_DOMAIN}>`;
+
+		formData.append("from", fromEmail);
+		formData.append("to", to);
+		formData.append("subject", subject);
+		formData.append("html", html);
+
+		const auth = btoa(`api:${env.MAILGUN_API_KEY}`);
+
+		const response = await fetch(
+			`https://api.mailgun.net/v3/${env.MAILGUN_DOMAIN}/messages`,
+			{
+				method: "POST",
+				headers: {
+					"Authorization": `Basic ${auth}`
+				},
+				body: formData
+			}
+		);
+
+		if (!response.ok) {
+			const errorText = await response.text();
+			console.error(`❌ Mailgun Error (${response.status}): ${errorText}`);
+			return false;
+		}
+
+		const data = await response.json() as any;
+		console.log(`✅ Email sent via Mailgun to: ${to} (ID: ${data.id})`);
+		return true;
+
+	} catch (error) {
+		console.error("❌ Email sending exception:", error);
+		return false;
+	}
 }

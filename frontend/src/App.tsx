@@ -67,10 +67,10 @@ export function AppRoutes({ lang }: AppRoutesProps) {
           <Route path="learn" element={<Learn />} />
 
           {/* LEGAL & CONTACT ROUTES */}
-          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-          <Route path="/terms-of-service" element={<TermsOfService />} />
-          <Route path="/disclaimer" element={<Disclaimer />} />
-          <Route path="/contact" element={<Contact />} />
+          <Route path="privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="terms-of-service" element={<TermsOfService />} />
+          <Route path="disclaimer" element={<Disclaimer />} />
+          <Route path="contact" element={<Contact />} />
 
           {/* USER DASHBOARD */}
           <Route path="dashboard" element={<Dashboard />} />

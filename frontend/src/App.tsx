@@ -1,15 +1,13 @@
-import { Suspense, lazy, createContext, useEffect } from 'react'; // 1. Suspense and lazy added
+import { Suspense, lazy, createContext, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
 import type { LangType } from './content';
 
 // COMPONENTS
-// AdminRoute can remain static as it's usually a small wrapper,
-// but pages must definitely be lazy loaded.
 import AdminRoute from './components/AdminRoute';
 
-// 2. LAZY IMPORTS (Pages are loaded only when needed)
+// LAZY IMPORTS
 const Home = lazy(() => import('./pages/Home'));
 const Login = lazy(() => import('./pages/Login'));
 const Register = lazy(() => import('./pages/Register'));
@@ -22,18 +20,18 @@ const PropertyDetails = lazy(() => import('./pages/PropertyDetails'));
 const Learn = lazy(() => import('./pages/Learn'));
 const About = lazy(() => import('./pages/About'));
 
-// NEW LEGAL & CONTACT PAGES (Lazy Load)
+// NEW LEGAL & CONTACT PAGES
 const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
 const TermsOfService = lazy(() => import('./pages/TermsOfService'));
 const Disclaimer = lazy(() => import('./pages/Disclaimer'));
 const Contact = lazy(() => import('./pages/Contact'));
 
-// PAGES (Admin) - Lazy Load
+// PAGES (Admin)
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
 const AdminWithdrawals = lazy(() => import('./pages/admin/AdminWithdrawals'));
 const Properties = lazy(() => import('./pages/admin/Properties'));
 
-// 3. LOADING COMPONENT (Spinner shown during loading)
+// LOADING COMPONENT
 const PageLoader = () => (
   <div className="min-h-screen flex items-center justify-center bg-[#0F172A]">
     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00E5FF]"></div>
@@ -47,13 +45,28 @@ type AppRoutesProps = {
 };
 
 export function AppRoutes({ lang }: AppRoutesProps) {
+
+  // DİL VE BAŞLIK AYARLAMALARI
   useEffect(() => {
+    // 1. HTML lang niteliğini güncelle
     document.documentElement.lang = lang;
+
+    // 2. Tarayıcı Başlığını Dile Göre Güncelle
+    const titles: Record<string, string> = {
+      'en': "Tokenized Fractional Real Estate Investment",
+      'pt-br': "Investimento Imobiliário Fracionado Tokenizado", // Brezilya Portekizcesi
+      'es': "Inversión Inmobiliaria Fraccionada Tokenizada",     // Latin Amerika İspanyolcası
+      'fr': "Investissement Immobilier Fractionné Tokenisé"      // Fransızca
+    };
+
+    // Varsayılan olarak İngilizce kullan, yoksa o anki dili al
+    const subtitle = titles[lang] || titles['en'];
+    document.title = `TerraVest | ${subtitle}`;
+
   }, [lang]);
 
   return (
     <LanguageContext.Provider value={lang}>
-      {/* 4. SUSPENSE WRAPPER (Wraps all routes) */}
       <Suspense fallback={<PageLoader />}>
         <Routes>
           {/* --- PUBLIC / USER ROUTES --- */}
@@ -82,18 +95,11 @@ export function AppRoutes({ lang }: AppRoutesProps) {
 
           {/* --- PROTECTED ADMIN ROUTES --- */}
           <Route element={<AdminRoute />}>
-
-            {/* 1. Admin Home Page -> Deposit Management */}
             <Route path="admin" element={<AdminDashboard />} />
             <Route path="admin/dashboard" element={<AdminDashboard />} />
             <Route path="admin/deposits" element={<AdminDashboard />} />
-
-            {/* 2. Withdrawal Management */}
             <Route path="admin/withdrawals" element={<AdminWithdrawals />} />
-
-            {/* 3. Property Management */}
             <Route path="admin/properties" element={<Properties />} />
-
           </Route>
 
           {/* --- 404 (Not Found) --- */}
@@ -114,9 +120,16 @@ function App() {
         }} />
 
         <Routes>
+          {/* Brezilya Portekizcesi */}
           <Route path="/pt-br/*" element={<AppRoutes lang="pt-br" />} />
+
+          {/* İspanyolca (Latin Amerika) */}
           <Route path="/es/*" element={<AppRoutes lang="es" />} />
+
+          {/* Fransızca */}
           <Route path="/fr/*" element={<AppRoutes lang="fr" />} />
+
+          {/* Varsayılan (İngilizce) */}
           <Route path="/*" element={<AppRoutes lang="en" />} />
         </Routes>
       </Router>

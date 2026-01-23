@@ -47,7 +47,11 @@ export const api = {
             method: "PUT",
             body: JSON.stringify(data)
         }),
-
+    contact: (data: { name: string; email: string; subject: string; message: string; turnstileToken?: string }) =>
+        request('/contact', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        }),
     // ============================
     // 🏠 MARKETPLACE & PORTFOLIO
     // ============================

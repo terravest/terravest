@@ -7,7 +7,7 @@ import { json, errorResponse } from "../lib/errors";
 import { isReservedUsername, USERNAME_REGEX } from "../lib/reserved";
 import { generateResetToken, hashResetToken, compareResetToken, getResetTokenExpiration } from "../lib/password-reset";
 import { compareVerificationToken, generateVerificationToken, getVerificationTokenExpiration, hashVerificationToken } from "../lib/email-verification";
-import { sendEmail } from "../lib/email-sender"; // ✅ Gerçek Mailgun göndericisi
+import { sendEmail } from "../lib/email-sender";
 import { getErrorMessage, getLangFromRequest, getSuccessMessage, type Lang } from "../lib/i18n";
 import type { ZodError } from "zod";
 
@@ -108,7 +108,8 @@ function getResetEmailContent(lang: Lang, url: string) {
 /* =========================
    REGISTER
 ========================= */
-export async function handleRegister(request: Request, env: Env): Promise<Response> {
+// 🚨 GÜNCELLEME: ctx parametresi eklendi
+export async function handleRegister(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     try {
         let body: any;
         try {
@@ -131,17 +132,17 @@ export async function handleRegister(request: Request, env: Env): Promise<Respon
         const normalizedEmail = email.toLowerCase();
         const normalizedUsername = username.toLowerCase();
 
-        // 3. Validate username format (redundant but safe)
+        // 3. Validate username format
         if (!USERNAME_REGEX.test(username)) {
             return errorResponse(getErrorMessage(lang, 'INVALID_USERNAME_FORMAT'), 400);
         }
 
-        // 4. Check if reserved (case-insensitive)
+        // 4. Check if reserved
         if (isReservedUsername(normalizedUsername)) {
             return errorResponse(getErrorMessage(lang, 'USERNAME_RESERVED'), 400);
         }
 
-        // 5. Validate email format (redundant but safe)
+        // 5. Validate email format
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
             return errorResponse(getErrorMessage(lang, 'INVALID_EMAIL_FORMAT'), 400);
@@ -153,7 +154,7 @@ export async function handleRegister(request: Request, env: Env): Promise<Respon
         const verificationTokenHash = await hashVerificationToken(verificationToken);
         const verificationExpiresAt = getVerificationTokenExpiration();
 
-        // 7. Attempt database insert (UNIQUE constraints are the final authority)
+        // 7. Attempt database insert
         try {
             const result = await env.terravest_db
                 .prepare('INSERT INTO users (email, username, password, role, email_verified, email_verified_at) VALUES (?, ?, ?, ?, 0, NULL)')
@@ -176,8 +177,8 @@ export async function handleRegister(request: Request, env: Env): Promise<Respon
             const verificationUrl = buildVerificationUrl(frontendUrl, verificationToken, lang);
             const emailContent = getVerificationEmailContent(lang, verificationUrl);
 
-            // Fire and forget email to speed up response (or await if reliability is critical)
-            request.waitUntil(
+            // 🚨 GÜNCELLEME: request.waitUntil -> ctx.waitUntil
+            ctx.waitUntil(
                 sendEmail(env, {
                     to: normalizedEmail,
                     subject: emailContent.subject,
@@ -215,7 +216,8 @@ export async function handleRegister(request: Request, env: Env): Promise<Respon
 /* =========================
    LOGIN
 ========================= */
-export async function handleLogin(request: Request, env: Env): Promise<Response> {
+// ctx parametresi eklendi (Login'de kullanılmasa da standart yapı için iyidir)
+export async function handleLogin(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     try {
         let body: any;
         try {
@@ -226,9 +228,7 @@ export async function handleLogin(request: Request, env: Env): Promise<Response>
         }
         const lang = getLangFromRequest(request, body);
 
-        // ---------------------------------------------------------
-        // SECURITY STEP: TURNSTILE CHECK (MANDATORY)
-        // ---------------------------------------------------------
+        // Security Check
         const turnstileToken = body.turnstileToken;
         const ip = request.headers.get('CF-Connecting-IP') || "";
 
@@ -240,10 +240,7 @@ export async function handleLogin(request: Request, env: Env): Promise<Response>
             if (!isHuman) {
                 return errorResponse(getErrorMessage(lang, 'BOT_VERIFICATION_FAILED'), 403);
             }
-        } else {
-            console.warn("⚠️ TURNSTILE_SECRET not set. Skipping bot check.");
         }
-        // ---------------------------------------------------------
 
         // Validation
         const validation = LoginSchema.safeParse(body);
@@ -273,11 +270,10 @@ export async function handleLogin(request: Request, env: Env): Promise<Response>
             return json({
                 error: "EMAIL_NOT_VERIFIED",
                 message: getErrorMessage(lang, 'EMAIL_NOT_VERIFIED'),
-                email: user.email // Return email so frontend can trigger resend
+                email: user.email
             }, 403);
         }
 
-        // 🕒 TOKEN DURATION
         const expirationTime = rememberMe
             ? Math.floor(Date.now() / 1000) + (60 * 60 * 24 * 7) // 7 days
             : Math.floor(Date.now() / 1000) + (60 * 60 * 2); // 2 hours
@@ -309,7 +305,7 @@ export async function handleLogin(request: Request, env: Env): Promise<Response>
 /* =========================
    VERIFY EMAIL
 ========================= */
-export async function handleVerifyEmail(request: Request, env: Env): Promise<Response> {
+export async function handleVerifyEmail(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     try {
         let body: any;
         try {
@@ -327,7 +323,6 @@ export async function handleVerifyEmail(request: Request, env: Env): Promise<Res
 
         const db = env.terravest_db;
 
-        // Cleanup old tokens
         await db.prepare("DELETE FROM email_verification_tokens WHERE expires_at < datetime('now') OR used = 1").run();
 
         const tokens = await db.prepare(`
@@ -368,7 +363,8 @@ export async function handleVerifyEmail(request: Request, env: Env): Promise<Res
 /* =========================
    RESEND VERIFICATION
 ========================= */
-export async function handleResendVerification(request: Request, env: Env): Promise<Response> {
+// 🚨 GÜNCELLEME: ctx eklendi
+export async function handleResendVerification(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     try {
         let body: any;
         try {
@@ -396,7 +392,6 @@ export async function handleResendVerification(request: Request, env: Env): Prom
             .first();
 
         if (!user || Number(user.email_verified) === 1) {
-            // Silently succeed to prevent enumeration
             return json({ success: true, message: getSuccessMessage(lang, 'EMAIL_VERIFICATION_SENT') });
         }
 
@@ -413,7 +408,8 @@ export async function handleResendVerification(request: Request, env: Env): Prom
         const verificationUrl = buildVerificationUrl(frontendUrl, verificationToken, lang);
         const emailContent = getVerificationEmailContent(lang, verificationUrl);
 
-        request.waitUntil(
+        // 🚨 GÜNCELLEME: request.waitUntil -> ctx.waitUntil
+        ctx.waitUntil(
             sendEmail(env, {
                 to: normalizedEmail,
                 subject: emailContent.subject,
@@ -482,7 +478,8 @@ export async function handleCheckEmail(request: Request, env: Env): Promise<Resp
 /* =========================
    FORGOT PASSWORD
 ========================= */
-export async function handleForgotPassword(request: Request, env: Env): Promise<Response> {
+// 🚨 GÜNCELLEME: ctx eklendi
+export async function handleForgotPassword(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     try {
         let body: any;
         try {
@@ -534,7 +531,8 @@ export async function handleForgotPassword(request: Request, env: Env): Promise<
             const resetLink = `${frontendUrl}/reset-password?token=${resetToken}`;
             const emailContent = getResetEmailContent(lang, resetLink);
 
-            request.waitUntil(
+            // 🚨 GÜNCELLEME: request.waitUntil -> ctx.waitUntil
+            ctx.waitUntil(
                 sendEmail(env, {
                     to: normalizedEmail,
                     subject: emailContent.subject,

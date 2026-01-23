@@ -30,6 +30,9 @@ export default function Login() {
     const [showResend, setShowResend] = useState(false);
     const [isResending, setIsResending] = useState(false);
 
+    // GÜNCELLEME: Doğrulanmamış emaili tutmak için state
+    const [pendingVerificationEmail, setPendingVerificationEmail] = useState<string | null>(null);
+
     useEffect(() => {
         if (user) {
             if (user.role === 'admin') {
@@ -43,6 +46,7 @@ export default function Login() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setShowResend(false);
+        setPendingVerificationEmail(null); // Her denemede sıfırla
 
         if (!turnstileToken) {
             toast.error(t.auth.loginBotError);
@@ -81,6 +85,16 @@ export default function Login() {
             if (errorCode === 'EMAIL_NOT_VERIFIED') {
                 errorMessage = t.auth.email_not_verified_error;
                 setShowResend(true);
+
+                // GÜNCELLEME: Backend'den gelen emaili yakala
+                // Hata objesinin içinde .email varsa onu state'e kaydet
+                // Axios kullanıyorsanız genellikle error.response.data.email olur.
+                // Eğer api.login bir wrapper ise ve direkt JSON dönüyorsa error.email olabilir.
+                // İkisini de kontrol edelim:
+                const emailFromBackend = error.email || error.response?.data?.email;
+                if (emailFromBackend) {
+                    setPendingVerificationEmail(emailFromBackend);
+                }
             } else if (typeof error === 'string') {
                 errorMessage = error;
             } else if (error.error) {
@@ -96,13 +110,17 @@ export default function Login() {
     };
 
     const handleResend = async () => {
-        if (!identifier || !identifier.includes('@')) {
+        // GÜNCELLEME: Öncelik state'deki emailde, yoksa inputtakinde (eğer emailse)
+        const emailToSend = pendingVerificationEmail || identifier;
+
+        if (!emailToSend || !emailToSend.includes('@')) {
             toast.error(t.auth.email_verification_resend_missing);
             return;
         }
+
         setIsResending(true);
         try {
-            await api.resendVerificationEmail({ email: identifier, lang });
+            await api.resendVerificationEmail({ email: emailToSend, lang });
             toast.success(t.auth.email_verification_sent);
         } catch (error) {
             toast.error(t.auth.email_verification_resend_failed);

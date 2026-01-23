@@ -20,6 +20,7 @@ import { handleClaim } from "./routes/claim";
 import { handleWithdraw } from "./routes/withdraw";
 import { handleTestReset } from "./routes/test";
 import { handleUpload } from "./routes/upload";
+import { handleContactForm } from "./routes/contact";
 
 // Utilities
 import { authMiddleware, requireAuth, adminMiddleware, requireAdmin } from "./lib/auth";
@@ -87,7 +88,7 @@ app.use(
 			}
 
 			// Debug için (Production'da kaldırabilirsiniz)
-			console.log(`🔍 CORS Check - Origin: ${origin}, Allowed: ${allowedOrigins.includes(origin)}`);
+			// console.log(`🔍 CORS Check - Origin: ${origin}, Allowed: ${allowedOrigins.includes(origin)}`);
 
 			return allowedOrigins.includes(origin) ? origin : null;
 		},
@@ -272,15 +273,17 @@ app.get('/api/accrue-rewards-all', async (c) => {
 // ==========================================
 // AUTHENTICATION ROUTES
 // ==========================================
+// 🚨 GÜNCELLEME: Tüm auth fonksiyonlarına 'c.executionCtx' (yani ctx) iletiliyor.
 app.get('/api/auth/check-username', (c) => handleCheckUsername(c.req.raw, c.env));
 app.get('/api/auth/check-email', (c) => handleCheckEmail(c.req.raw, c.env));
-app.post('/api/auth/register', (c) => handleRegister(c.req.raw, c.env));
-app.post('/api/auth/login', (c) => handleLogin(c.req.raw, c.env));
-app.post('/api/auth/forgot-password', (c) => handleForgotPassword(c.req.raw, c.env));
+app.post('/api/auth/register', (c) => handleRegister(c.req.raw, c.env, c.executionCtx));
+app.post('/api/auth/login', (c) => handleLogin(c.req.raw, c.env, c.executionCtx));
+app.post('/api/auth/forgot-password', (c) => handleForgotPassword(c.req.raw, c.env, c.executionCtx));
 app.post('/api/auth/reset-password', (c) => handleResetPassword(c.req.raw, c.env));
-app.post('/api/auth/verify-email', (c) => handleVerifyEmail(c.req.raw, c.env));
-app.post('/api/auth/resend-verification', (c) => handleResendVerification(c.req.raw, c.env));
+app.post('/api/auth/verify-email', (c) => handleVerifyEmail(c.req.raw, c.env, c.executionCtx));
+app.post('/api/auth/resend-verification', (c) => handleResendVerification(c.req.raw, c.env, c.executionCtx));
 app.get('/api/auth/me', (c) => handleMe(c.req.raw, c.env));
+app.post('/api/contact', (c) => handleContactForm(c.req.raw, c.env, c.executionCtx));
 
 app.put('/api/auth/change-password', authMiddleware, async (c) => {
 	const user = c.get('user');

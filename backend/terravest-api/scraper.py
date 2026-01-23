@@ -12,10 +12,14 @@ IMPORT_KEY = "terravest-local-import-2024"
 # Search Settings
 LOCATION = "Miami, FL"
 LISTING_TYPE = "for_sale"  # for_sale, for_rent, sold
-LIMIT = 20  # Target number of properties to import
+LIMIT = 37  # Target number of properties to import
 MIN_IMAGES = 12
 MAX_IMAGES = 20
 REQUEST_TIMEOUT = 15
+
+# 🛑 PRICE FILTERS (New)
+MIN_PRICE = 500_000   # 150k altını (hatalı/küçük) alma
+MAX_PRICE = 4_000_000  # 5M üstünü (aşırı lüks/hatalı) alma
 # ===========================================
 
 
@@ -23,19 +27,26 @@ def calculate_smart_yield(price):
     """
     Fiyata göre dinamik 'Rental Yield' hesaplar.
     """
+    # Yield hesabı için fiyatı belirli aralıkta sıkıştırıyoruz
     clamped_price = max(100_000, min(price, 2_500_000))
     price_factor = (clamped_price - 100_000) / (2_500_000 - 100_000)
+
+    # Fiyat arttıkça yield düşer mantığı (Base 9.5% -> 5.0%)
     base_yield = 9.5 - (price_factor * 4.5)
+
+    # Biraz rastgelelik ekle
     noise = random.uniform(-0.8, 0.8)
     final_yield = base_yield + noise
+
+    # 5.01% ile 9.99% arasında tut
     return f"{max(5.01, min(final_yield, 9.99)):.2f}%"
 
 
 def main():
     print("🚀 Starting scraper (HomeHarvest)...")
     print(f"📍 Location: {LOCATION} | Mode: {LISTING_TYPE}")
-    print(
-        f"📸 Filter: Properties with at least {MIN_IMAGES} photos will be selected.")
+    print(f"💰 Price Filter: ${MIN_PRICE:,.0f} - ${MAX_PRICE:,.0f}")
+    print(f"📸 Image Filter: Min {MIN_IMAGES} photos")
 
     try:
         print("⏳ Scanning listings, please wait...")
@@ -61,14 +72,27 @@ def main():
     for index, row in properties.iterrows():
         try:
             if success_count >= LIMIT:
+                print("🏁 Target limit reached.")
                 break
 
-            # Skip if price is missing
+            # --- PRICE VALIDATION ---
             price = row.get("list_price")
+
+            # Fiyat yoksa atla
             if pd.isna(price) or price == 0:
                 continue
 
             price = int(price)
+
+            # 🚨 YENİ FİLTRE: Fiyat çok düşük veya çok yüksekse atla
+            if price < MIN_PRICE:
+                # print(f"📉 Skipped low price: ${price:,.0f}") # İstersen commenti aç
+                continue
+
+            if price > MAX_PRICE:
+                # print(f"📈 Skipped high price: ${price:,.0f}")
+                continue
+            # ------------------------
 
             # Build address
             street = row.get("street", "")
@@ -109,18 +133,17 @@ def main():
             has_bad_keywords = "call agent" in raw_desc.lower(
             ) or "contact listing" in raw_desc.lower()
 
-            if pd.isna(row.get("description")) or is_too_short or has_bad_keywords:
-                # Collect base attributes
-                d_beds = int(row.get("beds")) if pd.notna(
-                    row.get("beds")) else 3
-                d_baths = int(row.get("full_baths")) if pd.notna(
-                    row.get("full_baths")) else 2
-                d_sqft = int(row.get("sqft")) if pd.notna(
-                    row.get("sqft")) else 1500
-                d_year = int(row.get("year_built")) if pd.notna(
-                    row.get("year_built")) else 2015
-                d_type = row.get("style", "Single Family Residence")
+            # Verileri güvenli şekilde al (None kontrolü)
+            d_beds = int(row.get("beds")) if pd.notna(row.get("beds")) else 3
+            d_baths = int(row.get("full_baths")) if pd.notna(
+                row.get("full_baths")) else 2
+            d_sqft = int(row.get("sqft")) if pd.notna(
+                row.get("sqft")) else 1500
+            d_year = int(row.get("year_built")) if pd.notna(
+                row.get("year_built")) else 2015
+            d_type = row.get("style", "Single Family Residence")
 
+            if pd.isna(row.get("description")) or is_too_short or has_bad_keywords:
                 # Templates
                 templates = [
                     (
@@ -168,9 +191,9 @@ def main():
                 "description": description,
                 "location": full_address,
                 "price": price,
-                "bed": int(row.get("beds")) if pd.notna(row.get("beds")) else 0,
-                "bath": int(row.get("full_baths")) if pd.notna(row.get("full_baths")) else 0,
-                "sqft": int(row.get("sqft")) if pd.notna(row.get("sqft")) else 0,
+                "bed": d_beds,
+                "bath": d_baths,
+                "sqft": d_sqft,
                 "rental_yield": smart_rental_yield,
                 "images": images
             }
@@ -196,13 +219,14 @@ def main():
                             f"⏩ Skipped (already exists): {payload['title']}")
                     else:
                         print(
-                            f"✅ Imported ({len(images)} images): {payload['title']} (${price}) -> Yield: {smart_rental_yield}")
+                            f"✅ Imported ({len(images)} images): {payload['title']} (${price:,}) -> Yield: {smart_rental_yield}")
                         success_count += 1
                 except ValueError:
                     print(f"✅ Imported: {payload['title']}")
                     success_count += 1
             else:
-                print(f"⚠️ Import failed: {response.text}")
+                print(
+                    f"⚠️ Import failed ({response.status_code}): {response.text}")
 
         except Exception as e:
             print(f"⚠️ Row processing error: {e}")

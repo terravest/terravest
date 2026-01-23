@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import Navbar from '../../components/Navbar';
 import { api } from '../../lib/api';
 import {
     Plus, Edit2, Trash2, X, Star, Upload, Loader2, Image as ImageIcon,
-    ArrowUp, ArrowDown, CheckCircle
+    ArrowUp, ArrowDown, CheckCircle, Search
 } from 'lucide-react';
 import { formatCurrency, formatNumber, formatPercent } from '../../utils/format';
 
@@ -21,10 +21,16 @@ interface Property {
     price_usd: number; // Backend stores in Cents
     total_tokens: number;
     available_tokens: number;
-    rental_yield?: string; // String value
+    rental_yield?: string | number; // String value or number
     image_url?: string;
     images?: PropertyImage[];
     status?: string;
+}
+
+type SortDirection = 'asc' | 'desc';
+interface SortConfig {
+    key: keyof Property;
+    direction: SortDirection;
 }
 
 export default function Properties() {
@@ -34,6 +40,10 @@ export default function Properties() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingProperty, setEditingProperty] = useState<Property | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // --- SORT & FILTER STATE ---
+    const [searchTerm, setSearchTerm] = useState('');
+    const [sortConfig, setSortConfig] = useState<SortConfig | null>({ key: 'id', direction: 'desc' });
 
     // Form state
     const [formData, setFormData] = useState({
@@ -67,6 +77,71 @@ export default function Properties() {
         fetchProperties();
     }, []);
 
+    // --- SORTING & FILTERING LOGIC ---
+    const handleSort = (key: keyof Property) => {
+        let direction: SortDirection = 'asc';
+        if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+            direction = 'desc';
+        }
+        setSortConfig({ key, direction });
+    };
+
+    const sortedAndFilteredProperties = useMemo(() => {
+        let processedData = [...properties];
+
+        // 1. Filter
+        if (searchTerm) {
+            const lowerTerm = searchTerm.toLowerCase();
+            processedData = processedData.filter(p =>
+                p.title.toLowerCase().includes(lowerTerm) ||
+                (p.location && p.location.toLowerCase().includes(lowerTerm))
+            );
+        }
+
+        // 2. Sort
+        if (sortConfig) {
+            processedData.sort((a, b) => {
+                const aValue = a[sortConfig.key];
+                const bValue = b[sortConfig.key];
+
+                // Yield için özel parsing (örn: "10%" stringini sayıya çevirme)
+                if (sortConfig.key === 'rental_yield') {
+                    const parseYield = (val: any) => {
+                        if (typeof val === 'number') return val;
+                        if (!val) return 0;
+                        return parseFloat(val.toString().replace(/[^0-9.-]+/g, ""));
+                    };
+                    const aYield = parseYield(aValue);
+                    const bYield = parseYield(bValue);
+                    return sortConfig.direction === 'asc' ? aYield - bYield : bYield - aYield;
+                }
+
+                // String sorting
+                if (typeof aValue === 'string' && typeof bValue === 'string') {
+                    return sortConfig.direction === 'asc'
+                        ? aValue.localeCompare(bValue)
+                        : bValue.localeCompare(aValue);
+                }
+
+                // Number sorting
+                // @ts-ignore
+                if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+                // @ts-ignore
+                if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
+
+        return processedData;
+    }, [properties, searchTerm, sortConfig]);
+
+    // Helper to render sort icon
+    const renderSortIcon = (key: keyof Property) => {
+        if (sortConfig?.key !== key) return <div className="w-4" />; // Placeholder to prevent jump
+        return sortConfig.direction === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />;
+    };
+
+
     // Open modal for adding new property
     const handleAddNew = () => {
         setEditingProperty(null);
@@ -93,13 +168,12 @@ export default function Properties() {
                 title: fullProperty.title || '',
                 description: fullProperty.description || '',
                 location: fullProperty.location || '',
-                // 💰 DÜZELTME: Cent -> Dolar çevrimi (Edit modunda input doğru görünsün diye)
                 price_usd: fullProperty.price_usd ? (fullProperty.price_usd / 100).toString() : '',
                 total_tokens: fullProperty.total_tokens?.toString() || '',
                 available_tokens: fullProperty.available_tokens?.toString() || '',
-                rental_yield: fullProperty.rental_yield || '',
+                rental_yield: fullProperty.rental_yield ? fullProperty.rental_yield.toString() : '',
             });
-            // Set images from property_images or fallback to image_url
+            // Set images
             if (fullProperty.images && fullProperty.images.length > 0) {
                 setImages(fullProperty.images);
             } else if (fullProperty.image_url) {
@@ -138,7 +212,6 @@ export default function Properties() {
         }
     };
 
-    // Set main image
     const handleSetMainImage = (index: number) => {
         const newImages = images.map((img, i) => ({
             ...img,
@@ -147,12 +220,10 @@ export default function Properties() {
         setImages(newImages);
     };
 
-    // Remove image
     const handleRemoveImage = (index: number) => {
         setImages(images.filter((_, i) => i !== index));
     };
 
-    // Move image up/down
     const handleMoveImage = (index: number, direction: 'up' | 'down') => {
         const newImages = [...images];
         if (direction === 'up' && index > 0) {
@@ -163,13 +234,11 @@ export default function Properties() {
         setImages(newImages);
     };
 
-    // Handle form submit
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
 
         try {
-            // Validate: available_tokens cannot exceed total_tokens
             const totalTokens = parseInt(formData.total_tokens);
             const availableTokens = formData.available_tokens
                 ? parseInt(formData.available_tokens)
@@ -185,7 +254,6 @@ export default function Properties() {
                 title: formData.title,
                 description: formData.description,
                 location: formData.location || null,
-                // 💰 DÜZELTME: Dolar -> Cent çevrimi (Backend'e gönderirken x100)
                 price_usd: Math.round(parseFloat(formData.price_usd) * 100),
                 total_tokens: totalTokens,
                 available_tokens: availableTokens,
@@ -212,10 +280,8 @@ export default function Properties() {
         }
     };
 
-    // Handle delete
     const handleDelete = async (id: number) => {
         if (!confirm('Are you sure you want to deactivate this property?')) return;
-
         try {
             await api.deleteProperty(id);
             fetchProperties();
@@ -230,14 +296,29 @@ export default function Properties() {
 
             <div className="container mx-auto px-4 py-8">
                 {/* Header */}
-                <div className="flex justify-between items-center mb-8">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
                     <h1 className="text-3xl font-bold text-[#0F172A]">Property Management</h1>
-                    <button
-                        onClick={handleAddNew}
-                        className="bg-[#009B9E] hover:bg-[#007a7d] text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-colors"
-                    >
-                        <Plus size={20} /> Add New Property
-                    </button>
+
+                    <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
+                        {/* 🔍 SEARCH BAR */}
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+                            <input
+                                type="text"
+                                placeholder="Search by title or location..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="pl-10 pr-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#009B9E] outline-none w-full md:w-64"
+                            />
+                        </div>
+
+                        <button
+                            onClick={handleAddNew}
+                            className="bg-[#009B9E] hover:bg-[#007a7d] text-white px-6 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors whitespace-nowrap"
+                        >
+                            <Plus size={20} /> Add New Property
+                        </button>
+                    </div>
                 </div>
 
                 {/* Properties Table */}
@@ -251,24 +332,66 @@ export default function Properties() {
                             <table className="w-full">
                                 <thead className="bg-slate-50 border-b border-slate-200">
                                     <tr>
-                                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase">Image</th>
-                                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase">Title</th>
-                                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase">Price</th>
-                                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase">Tokens</th>
-                                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase">Expected Yield</th>
-                                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase">Status</th>
+                                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase w-24">Image</th>
+
+                                        {/* 🔼 CLICKABLE HEADERS FOR SORTING */}
+                                        <th
+                                            className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase cursor-pointer hover:bg-slate-100 hover:text-[#009B9E] transition-colors group"
+                                            onClick={() => handleSort('title')}
+                                        >
+                                            <div className="flex items-center gap-1">
+                                                Title {renderSortIcon('title')}
+                                            </div>
+                                        </th>
+
+                                        <th
+                                            className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase cursor-pointer hover:bg-slate-100 hover:text-[#009B9E] transition-colors"
+                                            onClick={() => handleSort('price_usd')}
+                                        >
+                                            <div className="flex items-center gap-1">
+                                                Price {renderSortIcon('price_usd')}
+                                            </div>
+                                        </th>
+
+                                        <th
+                                            className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase cursor-pointer hover:bg-slate-100 hover:text-[#009B9E] transition-colors"
+                                            onClick={() => handleSort('available_tokens')}
+                                        >
+                                            <div className="flex items-center gap-1">
+                                                Tokens {renderSortIcon('available_tokens')}
+                                            </div>
+                                        </th>
+
+                                        <th
+                                            className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase cursor-pointer hover:bg-slate-100 hover:text-[#009B9E] transition-colors"
+                                            onClick={() => handleSort('rental_yield')}
+                                        >
+                                            <div className="flex items-center gap-1">
+                                                Expected Yield {renderSortIcon('rental_yield')}
+                                            </div>
+                                        </th>
+
+                                        <th
+                                            className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase cursor-pointer hover:bg-slate-100 hover:text-[#009B9E] transition-colors"
+                                            onClick={() => handleSort('status')}
+                                        >
+                                            <div className="flex items-center gap-1">
+                                                Status {renderSortIcon('status')}
+                                            </div>
+                                        </th>
+
                                         <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
-                                    {properties.length === 0 ? (
+                                    {sortedAndFilteredProperties.length === 0 ? (
                                         <tr>
                                             <td colSpan={7} className="px-6 py-12 text-center text-slate-400">
-                                                No properties found. Click "Add New Property" to create one.
+                                                {searchTerm ? 'No properties match your search.' : 'No properties found.'}
                                             </td>
                                         </tr>
                                     ) : (
-                                        properties.map((property) => (
+                                        sortedAndFilteredProperties.map((property) => (
                                             <tr key={property.id} className="hover:bg-slate-50 transition-colors">
                                                 <td className="px-6 py-4">
                                                     <div className="w-16 h-16 rounded-lg overflow-hidden bg-slate-100">
@@ -287,25 +410,30 @@ export default function Properties() {
                                                     <div className="text-xs text-slate-500 line-clamp-2 mt-1 max-w-xs">
                                                         {property.description}
                                                     </div>
+                                                    {property.location && (
+                                                        <div className="text-xs text-[#009B9E] mt-1">{property.location}</div>
+                                                    )}
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     <span className="font-bold text-[#0F172A]">
-                                                        {/* 💰 DÜZELTME: Tabloda gösterirken Cent -> Dolar çevrimi (/100) */}
                                                         {formatCurrency((property.price_usd || 0) / 100, lang)}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    <span className="text-slate-700">
-                                                        {formatNumber(property.available_tokens || 0, lang)} / {formatNumber(property.total_tokens || 0, lang)}
-                                                    </span>
+                                                    <div className="flex flex-col">
+                                                        <span className="text-slate-700 font-medium">
+                                                            {formatNumber(property.available_tokens || 0, lang)} available
+                                                        </span>
+                                                        <span className="text-xs text-slate-400">
+                                                            of {formatNumber(property.total_tokens || 0, lang)} total
+                                                        </span>
+                                                    </div>
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     <span className="text-green-600 font-bold">
                                                         {property.rental_yield !== null && property.rental_yield !== undefined
                                                             ? (() => {
-                                                                // Handle rental_yield if it's string percentage
                                                                 if (typeof property.rental_yield === 'string') return property.rental_yield;
-                                                                // Fallback for old numeric values
                                                                 if (typeof property.rental_yield === 'number') {
                                                                     const val = property.rental_yield as number;
                                                                     return formatPercent(val > 1 ? val / 100 : val, lang);
@@ -317,10 +445,10 @@ export default function Properties() {
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     <span className={`px-2 py-1 rounded-full text-xs font-bold ${property.status === 'active'
-                                                            ? 'bg-green-100 text-green-700'
-                                                            : property.status === 'deleted'
-                                                                ? 'bg-red-100 text-red-700'
-                                                                : 'bg-slate-100 text-slate-700'
+                                                        ? 'bg-green-100 text-green-700'
+                                                        : property.status === 'deleted'
+                                                            ? 'bg-red-100 text-red-700'
+                                                            : 'bg-slate-100 text-slate-700'
                                                         }`}>
                                                         {property.status === 'active' ? 'Active' : property.status === 'deleted' ? 'Deleted' : 'Draft'}
                                                     </span>
@@ -353,237 +481,74 @@ export default function Properties() {
                 )}
             </div>
 
-            {/* Add/Edit Modal */}
+            {/* Add/Edit Modal (Aynı kaldı) */}
             {isModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
                     <div className="bg-white rounded-2xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-                        {/* Modal Header */}
                         <div className="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center z-10">
                             <h2 className="text-2xl font-bold text-[#0F172A]">
                                 {editingProperty ? 'Edit Property' : 'Add New Property'}
                             </h2>
-                            <button
-                                onClick={() => setIsModalOpen(false)}
-                                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-                            >
+                            <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
                                 <X size={24} />
                             </button>
                         </div>
 
-                        {/* Modal Body */}
                         <form onSubmit={handleSubmit} className="p-6 space-y-6">
-                            {/* Basic Info */}
                             <div className="grid md:grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-bold text-slate-700 mb-2">
-                                        Title <span className="text-red-500">*</span>
-                                    </label>
-                                    <input
-                                        type="text"
-                                        required
-                                        value={formData.title}
-                                        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#009B9E] focus:border-transparent"
-                                        placeholder="Property Title"
-                                    />
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">Title <span className="text-red-500">*</span></label>
+                                    <input type="text" required value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#009B9E] outline-none" />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-bold text-slate-700 mb-2">
-                                        Price (USD) <span className="text-red-500">*</span>
-                                    </label>
-                                    <input
-                                        type="number"
-                                        required
-                                        step="0.01"
-                                        value={formData.price_usd}
-                                        onChange={(e) => setFormData({ ...formData, price_usd: e.target.value })}
-                                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#009B9E] focus:border-transparent"
-                                        placeholder="100000"
-                                    />
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">Price (USD) <span className="text-red-500">*</span></label>
+                                    <input type="number" required step="0.01" value={formData.price_usd} onChange={(e) => setFormData({ ...formData, price_usd: e.target.value })} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#009B9E] outline-none" />
                                 </div>
                             </div>
-
                             <div>
-                                <label className="block text-sm font-bold text-slate-700 mb-2">
-                                    Location
-                                </label>
-                                <input
-                                    type="text"
-                                    value={formData.location}
-                                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#009B9E] focus:border-transparent"
-                                    placeholder="City, Country"
-                                />
+                                <label className="block text-sm font-bold text-slate-700 mb-2">Location</label>
+                                <input type="text" value={formData.location} onChange={(e) => setFormData({ ...formData, location: e.target.value })} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#009B9E] outline-none" />
                             </div>
-
                             <div>
-                                <label className="block text-sm font-bold text-slate-700 mb-2">
-                                    Description
-                                </label>
-                                <textarea
-                                    value={formData.description}
-                                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#009B9E] focus:border-transparent"
-                                    rows={4}
-                                    placeholder="Property description..."
-                                />
+                                <label className="block text-sm font-bold text-slate-700 mb-2">Description</label>
+                                <textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#009B9E] outline-none" rows={4} />
                             </div>
-
                             <div className="grid md:grid-cols-3 gap-4">
                                 <div>
-                                    <label className="block text-sm font-bold text-slate-700 mb-2">
-                                        Total Tokens <span className="text-red-500">*</span>
-                                    </label>
-                                    <input
-                                        type="number"
-                                        required
-                                        value={formData.total_tokens}
-                                        onChange={(e) => {
-                                            const newTotal = e.target.value;
-                                            setFormData({
-                                                ...formData,
-                                                total_tokens: newTotal,
-                                                // In create mode, sync available_tokens with total_tokens
-                                                available_tokens: editingProperty ? formData.available_tokens : newTotal
-                                            });
-                                        }}
-                                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#009B9E] focus:border-transparent"
-                                        placeholder="10000"
-                                    />
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">Total Tokens <span className="text-red-500">*</span></label>
+                                    <input type="number" required value={formData.total_tokens} onChange={(e) => setFormData({ ...formData, total_tokens: e.target.value, available_tokens: editingProperty ? formData.available_tokens : e.target.value })} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#009B9E] outline-none" />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-bold text-slate-700 mb-2">
-                                        Available Tokens <span className="text-red-500">*</span>
-                                    </label>
-                                    <input
-                                        type="number"
-                                        required
-                                        value={formData.available_tokens}
-                                        onChange={(e) => {
-                                            const newAvailable = e.target.value;
-                                            // Validate logic here if needed, but validation is also on submit
-                                            setFormData({ ...formData, available_tokens: newAvailable });
-                                        }}
-                                        className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#009B9E] focus:border-transparent ${formData.available_tokens && formData.total_tokens &&
-                                                parseInt(formData.available_tokens) > parseInt(formData.total_tokens)
-                                                ? 'border-red-300 bg-red-50'
-                                                : 'border-slate-300'
-                                            }`}
-                                        placeholder={formData.total_tokens || "10000"}
-                                        max={formData.total_tokens || undefined}
-                                    />
-                                    {formData.available_tokens && formData.total_tokens &&
-                                        parseInt(formData.available_tokens) > parseInt(formData.total_tokens) && (
-                                            <p className="text-xs text-red-500 mt-1">Cannot exceed total tokens</p>
-                                        )}
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">Available Tokens <span className="text-red-500">*</span></label>
+                                    <input type="number" required value={formData.available_tokens} onChange={(e) => setFormData({ ...formData, available_tokens: e.target.value })} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#009B9E] outline-none" />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-bold text-slate-700 mb-2">
-                                        Expected Yield
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={formData.rental_yield}
-                                        onChange={(e) => setFormData({ ...formData, rental_yield: e.target.value })}
-                                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#009B9E] focus:border-transparent"
-                                        placeholder="6-20% or ~12% or 10.5%"
-                                    />
-                                    <p className="text-xs text-slate-500 mt-1">Enter as text (e.g., "6-20%", "~12%", "10.5%")</p>
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">Expected Yield</label>
+                                    <input type="text" value={formData.rental_yield} onChange={(e) => setFormData({ ...formData, rental_yield: e.target.value })} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#009B9E] outline-none" placeholder="e.g. 12%" />
                                 </div>
                             </div>
-
-                            {/* Image Upload Section */}
+                            {/* Image Section (unchanged logic) */}
                             <div>
-                                <label className="block text-sm font-bold text-slate-700 mb-2">
-                                    Images
-                                </label>
-
-                                {/* Upload Button */}
+                                <label className="block text-sm font-bold text-slate-700 mb-2">Images</label>
                                 <div className="mb-4">
                                     <label className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg cursor-pointer transition-colors">
-                                        <Upload size={18} />
-                                        <span className="text-sm font-medium">Upload Images</span>
-                                        <input
-                                            type="file"
-                                            multiple
-                                            accept="image/*"
-                                            onChange={handleFileSelect}
-                                            disabled={uploading}
-                                            className="hidden"
-                                        />
+                                        <Upload size={18} /> <span className="text-sm font-medium">Upload Images</span>
+                                        <input type="file" multiple accept="image/*" onChange={handleFileSelect} disabled={uploading} className="hidden" />
                                     </label>
-                                    {uploading && (
-                                        <span className="ml-4 text-sm text-slate-500 flex items-center gap-2">
-                                            <Loader2 className="animate-spin" size={16} />
-                                            Uploading...
-                                        </span>
-                                    )}
+                                    {uploading && <span className="ml-4 text-sm text-slate-500 flex items-center gap-2"><Loader2 className="animate-spin" size={16} /> Uploading...</span>}
                                 </div>
-
-                                {/* Image Gallery */}
                                 {images.length > 0 ? (
                                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                                         {images.map((img, index) => (
-                                            <div
-                                                key={index}
-                                                className={`relative group border-2 rounded-lg overflow-hidden ${img.isMain ? 'border-[#009B9E] ring-2 ring-[#009B9E]/20' : 'border-slate-200'
-                                                    }`}
-                                            >
-                                                <img
-                                                    src={img.url}
-                                                    alt={`Image ${index + 1}`}
-                                                    className="w-full h-32 object-cover"
-                                                    onError={(e) => {
-                                                        (e.target as HTMLImageElement).src = 'https://placehold.co/200x150?text=Error';
-                                                    }}
-                                                />
+                                            <div key={index} className={`relative group border-2 rounded-lg overflow-hidden ${img.isMain ? 'border-[#009B9E] ring-2 ring-[#009B9E]/20' : 'border-slate-200'}`}>
+                                                <img src={img.url} alt={`Img ${index}`} className="w-full h-32 object-cover" />
                                                 <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleSetMainImage(index)}
-                                                        className={`p-2 rounded-lg ${img.isMain
-                                                                ? 'bg-[#009B9E] text-white'
-                                                                : 'bg-white/90 text-slate-700 hover:bg-white'
-                                                            }`}
-                                                        title={img.isMain ? 'Main Image' : 'Set as Main'}
-                                                    >
-                                                        <Star size={16} fill={img.isMain ? 'currentColor' : 'none'} />
-                                                    </button>
-                                                    {index > 0 && (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => handleMoveImage(index, 'up')}
-                                                            className="p-2 bg-white/90 text-slate-700 hover:bg-white rounded-lg"
-                                                            title="Move Up"
-                                                        >
-                                                            <ArrowUp size={16} />
-                                                        </button>
-                                                    )}
-                                                    {index < images.length - 1 && (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => handleMoveImage(index, 'down')}
-                                                            className="p-2 bg-white/90 text-slate-700 hover:bg-white rounded-lg"
-                                                            title="Move Down"
-                                                        >
-                                                            <ArrowDown size={16} />
-                                                        </button>
-                                                    )}
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleRemoveImage(index)}
-                                                        className="p-2 bg-red-500/90 hover:bg-red-500 text-white rounded-lg"
-                                                        title="Remove"
-                                                    >
-                                                        <X size={16} />
-                                                    </button>
+                                                    <button type="button" onClick={() => handleSetMainImage(index)} className={`p-2 rounded-lg ${img.isMain ? 'bg-[#009B9E] text-white' : 'bg-white/90 text-slate-700 hover:bg-white'}`}><Star size={16} fill={img.isMain ? 'currentColor' : 'none'} /></button>
+                                                    {index > 0 && <button type="button" onClick={() => handleMoveImage(index, 'up')} className="p-2 bg-white/90 text-slate-700 hover:bg-white rounded-lg"><ArrowUp size={16} /></button>}
+                                                    {index < images.length - 1 && <button type="button" onClick={() => handleMoveImage(index, 'down')} className="p-2 bg-white/90 text-slate-700 hover:bg-white rounded-lg"><ArrowDown size={16} /></button>}
+                                                    <button type="button" onClick={() => handleRemoveImage(index)} className="p-2 bg-red-500/90 hover:bg-red-500 text-white rounded-lg"><X size={16} /></button>
                                                 </div>
-                                                {img.isMain && (
-                                                    <div className="absolute top-2 right-2 bg-[#009B9E] text-white px-2 py-1 rounded text-xs font-bold flex items-center gap-1">
-                                                        <Star size={12} fill="currentColor" />
-                                                        Main
-                                                    </div>
-                                                )}
+                                                {img.isMain && <div className="absolute top-2 right-2 bg-[#009B9E] text-white px-2 py-1 rounded text-xs font-bold flex items-center gap-1"><Star size={12} fill="currentColor" /> Main</div>}
                                             </div>
                                         ))}
                                     </div>
@@ -594,32 +559,10 @@ export default function Properties() {
                                     </div>
                                 )}
                             </div>
-
-                            {/* Modal Footer */}
                             <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
-                                <button
-                                    type="button"
-                                    onClick={() => setIsModalOpen(false)}
-                                    className="px-6 py-2 border border-slate-300 rounded-lg font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={isSubmitting}
-                                    className="px-6 py-2 bg-[#009B9E] hover:bg-[#007a7d] text-white rounded-lg font-bold flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    {isSubmitting ? (
-                                        <>
-                                            <Loader2 className="animate-spin" size={18} />
-                                            Saving...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <CheckCircle size={18} />
-                                            {editingProperty ? 'Update Property' : 'Create Property'}
-                                        </>
-                                    )}
+                                <button type="button" onClick={() => setIsModalOpen(false)} className="px-6 py-2 border border-slate-300 rounded-lg font-medium text-slate-700 hover:bg-slate-50">Cancel</button>
+                                <button type="submit" disabled={isSubmitting} className="px-6 py-2 bg-[#009B9E] hover:bg-[#007a7d] text-white rounded-lg font-bold flex items-center gap-2 disabled:opacity-50">
+                                    {isSubmitting ? <><Loader2 className="animate-spin" size={18} /> Saving...</> : <><CheckCircle size={18} /> {editingProperty ? 'Update' : 'Create'}</>}
                                 </button>
                             </div>
                         </form>

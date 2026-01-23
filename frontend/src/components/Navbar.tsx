@@ -14,9 +14,6 @@ import {
     ChevronDown,
     Settings,
     LayoutDashboard,
-    Wallet,
-    Globe,
-    LogIn
 } from 'lucide-react';
 import { useState, useEffect, useContext } from 'react';
 import DepositModal from './DepositModal';
@@ -37,8 +34,6 @@ export default function Navbar() {
 
     // Dropdown durumu
     const [accountOpen, setAccountOpen] = useState(false);
-    // Dil menüsü durumu
-    const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
 
     // Admin Kontrolü
     const isAdmin = user && ((user as any).role === 'admin' || (user as any).is_admin === 1);
@@ -97,7 +92,10 @@ export default function Navbar() {
 
     return (
         <>
-            <nav className="bg-[#0F172A] text-white py-4 border-b border-white/10 sticky top-0 z-40 backdrop-blur-md bg-opacity-95 shadow-lg">
+            {/* DÜZELTME: z-40 yerine z-[100] yapıldı. 
+                Bu sayede navbar ve açılan menüleri sayfanın diğer tüm öğelerinden (search bar vb.) daha üstte görünür. 
+            */}
+            <nav className="bg-[#0F172A] text-white py-4 border-b border-white/10 sticky top-0 z-[100] backdrop-blur-md bg-opacity-95 shadow-lg">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center">
 
                     {/* LOGO */}
@@ -196,7 +194,6 @@ export default function Navbar() {
                                             <span className="text-[10px] text-slate-400 font-bold uppercase">{t.navbar.balance}</span>
                                             <div className="flex items-center gap-1.5">
                                                 <span className="font-bold text-sm text-[#009B9E] tracking-wide">
-                                                    {/* DÜZELTME: displayBalance değişkenini kullan */}
                                                     {formatCurrency(displayBalance, lang)}
                                                 </span>
                                                 <button
@@ -269,7 +266,6 @@ export default function Navbar() {
                                     <div>
                                         <p className="text-xs text-slate-400 font-bold uppercase">{t.navbar.walletBalance}</p>
                                         <p className="text-2xl font-bold text-[#009B9E]">
-                                            {/* DÜZELTME: displayBalance değişkenini kullan */}
                                             {formatCurrency(displayBalance, lang)}
                                         </p>
                                     </div>

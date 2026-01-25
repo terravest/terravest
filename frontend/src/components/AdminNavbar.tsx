@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { LayoutDashboard, ArrowUpRight, LogOut } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { User } from 'lucide-react';
 
 export default function AdminNavbar() {
     const location = useLocation();
@@ -36,6 +37,15 @@ export default function AdminNavbar() {
                     className={`flex items-center gap-2 px-4 py-2 rounded-md transition font-medium text-sm ${getLinkClass('/admin/withdrawals')}`}
                 >
                     <ArrowUpRight size={16} /> Withdrawals
+                </Link>
+                <Link
+                    to="/admin/users"
+                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold transition ${location.pathname === '/admin/users'
+                            ? 'bg-[#009B9E] text-white shadow-lg'
+                            : 'text-slate-400 hover:text-white hover:bg-white/5'
+                        }`}
+                >
+                    <User size={16} /> Users
                 </Link>
             </div>
 

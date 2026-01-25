@@ -419,6 +419,17 @@ app.get('/api/admin/deposits', authMiddleware, adminMiddleware, async (c) => {
 	} catch (e: any) { return c.json({ error: e.message }, 500); }
 });
 
+app.get('/api/admin/users', authMiddleware, adminMiddleware, async (c) => {
+	try {
+		const { results } = await c.env.terravest_db.prepare(`
+            SELECT id, username, email, usd_balance, role, created_at, is_verified
+            FROM users
+            ORDER BY created_at DESC
+        `).all();
+		return c.json({ success: true, data: results });
+	} catch (e: any) { return c.json({ error: e.message }, 500); }
+});
+
 app.post('/api/admin/approve-deposit', authMiddleware, adminMiddleware, async (c) => {
 	try {
 		const body = await c.req.json() as any;

@@ -131,6 +131,7 @@ export function AppRoutes({ lang }: AppRoutesProps) {
             <Route path="admin/deposits" element={<AdminDashboard />} />
             <Route path="admin/withdrawals" element={<AdminWithdrawals />} />
             <Route path="admin/properties" element={<Properties />} />
+            <Route path="users" element={<Users />} />
           </Route>
 
           {/* --- 404 (Not Found) --- */}

@@ -3,6 +3,12 @@ import type { Env } from '../index';
 
 export const chatHandler = async (c: Context<{ Bindings: Env }>) => {
     try {
+        console.log("🔍 MEVCUT ENV ANAHTARLARI:", Object.keys(c.env));
+        if (c.env.GEMINI_API_KEY) {
+            console.log("✅ Key mevcut, uzunluk:", c.env.GEMINI_API_KEY.length);
+        } else {
+            console.log("❌ Key c.env içinde YOK!");
+        }
         // 1. Güvenli JSON parse
         let body;
         try {

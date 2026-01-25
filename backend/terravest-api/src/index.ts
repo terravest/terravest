@@ -133,10 +133,11 @@ app.post('/import/property', (c) => handleImport(c.req.raw, c.env));
 app.onError((err, c) => {
 	console.error("🔥 APP ERROR:", err);
 	Sentry.captureException(err);
-	const isDev = c.env.ENVIRONMENT === 'development';
+	//const isDev = c.env.ENVIRONMENT === 'development';
 	return c.json({
 		error: "Internal Server Error",
-		message: isDev ? (err.message || "Unknown error") : "Something went wrong. Please try again later."
+		message: err.message || "Unknown error", // Artık gerçek hatayı göreceğiz
+		stack: err.stack // Hatanın nerede olduğunu da göreceğiz
 	}, 500);
 });
 

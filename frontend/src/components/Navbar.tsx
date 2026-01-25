@@ -32,10 +32,8 @@ export default function Navbar() {
     const [isDepositOpen, setIsDepositOpen] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
 
-    // Dropdown durumu
     const [accountOpen, setAccountOpen] = useState(false);
 
-    // Admin Kontrolü
     const isAdmin = user && ((user as any).role === 'admin' || (user as any).is_admin === 1);
 
     useEffect(() => {
@@ -52,6 +50,10 @@ export default function Navbar() {
         setIsRefreshing(true);
         await refreshUser();
         setTimeout(() => setIsRefreshing(false), 500);
+    };
+
+    const handleLanguageChange = (selectedLang: LangType) => {
+        localStorage.setItem('app_lang', selectedLang);
     };
 
     const navLinkClass = "flex items-center gap-2 text-sm font-bold text-slate-300 hover:text-[#009B9E] transition";
@@ -92,9 +94,7 @@ export default function Navbar() {
 
     return (
         <>
-            {/* DÜZELTME: z-40 yerine z-[100] yapıldı. 
-                Bu sayede navbar ve açılan menüleri sayfanın diğer tüm öğelerinden (search bar vb.) daha üstte görünür. 
-            */}
+            {/* z-[100] ayarı korundu */}
             <nav className="bg-[#0F172A] text-white py-4 border-b border-white/10 sticky top-0 z-[100] backdrop-blur-md bg-opacity-95 shadow-lg">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center">
 
@@ -128,6 +128,7 @@ export default function Navbar() {
                                 <span key={option.code} className="flex items-center gap-2">
                                     <Link
                                         to={getLangSwitchLink(option.code)}
+                                        onClick={() => handleLanguageChange(option.code)}
                                         className={`hover:text-white transition ${lang === option.code ? 'text-white' : ''}`}
                                     >
                                         {option.label}
@@ -300,7 +301,10 @@ export default function Navbar() {
                                 <Link
                                     key={option.code}
                                     to={getLangSwitchLink(option.code)}
-                                    onClick={() => setMobileMenuOpen(false)}
+                                    onClick={() => {
+                                        setMobileMenuOpen(false);
+                                        handleLanguageChange(option.code);
+                                    }}
                                     className={`hover:text-white transition ${lang === option.code ? 'text-white' : ''}`}
                                 >
                                     {option.label}

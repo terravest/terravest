@@ -3,6 +3,8 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
 import type { LangType } from './content';
+import { useNavigate, useLocation } from 'react-router-dom';
+import SupportChat from './components/SupportChat'; // Import et
 
 // COMPONENTS
 import AdminRoute from './components/AdminRoute';
@@ -30,6 +32,35 @@ const Contact = lazy(() => import('./pages/Contact'));
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
 const AdminWithdrawals = lazy(() => import('./pages/admin/AdminWithdrawals'));
 const Properties = lazy(() => import('./pages/admin/Properties'));
+
+// 🌍 LANGUAGE ROUTE
+function LanguageRedirector() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.pathname !== '/') return;
+
+    const storedLang = localStorage.getItem('app_lang');
+    if (storedLang && storedLang !== 'en') {
+      navigate(`/${storedLang}`, { replace: true });
+      return;
+    }
+
+    const browserLang = navigator.language.toLowerCase();
+
+    if (browserLang.startsWith('pt')) {
+      navigate('/pt-br', { replace: true });
+    } else if (browserLang.startsWith('es')) {
+      navigate('/es', { replace: true });
+    } else if (browserLang.startsWith('fr')) {
+      navigate('/fr', { replace: true });
+    }
+
+  }, [navigate, location]);
+
+  return <Home />;
+}
 
 // LOADING COMPONENT
 const PageLoader = () => (
@@ -120,20 +151,38 @@ function App() {
         }} />
 
         <Routes>
-          {/* Brezilya Portekizcesi */}
+          {/* --- ÖZEL DİL ROTALARI --- */}
           <Route path="/pt-br/*" element={<AppRoutes lang="pt-br" />} />
-
-          {/* İspanyolca (Latin Amerika) */}
           <Route path="/es/*" element={<AppRoutes lang="es" />} />
-
-          {/* Fransızca */}
           <Route path="/fr/*" element={<AppRoutes lang="fr" />} />
 
-          {/* Varsayılan (İngilizce) */}
+          {/* --- VARSAYILAN (İNGİLİZCE) VE YÖNLENDİRME --- */}
+
+          {/* 1. Kök dizin ('/') için Yönlendiriciyi kullan */}
+          <Route path="/" element={
+            <AppRoutesPropsWrapper lang="en">
+              <LanguageRedirector />
+            </AppRoutesPropsWrapper>
+          } />
+
+          {/* 2. Diğer tüm İngilizce sayfalar (Login, Dashboard vb.) */}
           <Route path="/*" element={<AppRoutes lang="en" />} />
         </Routes>
+        <SupportChat />
       </Router>
     </AuthProvider>
+  );
+}
+
+// LanguageRedirector'ın Context'e erişebilmesi için küçük bir wrapper (AppRoutes mantığına uygun)
+function AppRoutesPropsWrapper({ lang, children }: { lang: LangType, children: React.ReactNode }) {
+  useEffect(() => { document.documentElement.lang = lang; }, [lang]);
+  return (
+    <LanguageContext.Provider value={lang}>
+      <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-[#0F172A]"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00E5FF]"></div></div>}>
+        {children}
+      </Suspense>
+    </LanguageContext.Provider>
   );
 }
 

@@ -8,6 +8,7 @@ import { secureHeaders } from 'hono/secure-headers';
 import * as Sentry from "@sentry/cloudflare";
 import bcrypt from "bcryptjs";
 import { rateLimiter } from "hono-rate-limiter";
+import { handleChat } from "./routes/chat";
 
 // Route handlers
 import { handleRegister, handleLogin, handleMe, handleCheckUsername, handleCheckEmail, handleForgotPassword, handleResetPassword, handleVerifyEmail, handleResendVerification } from "./routes/auth";
@@ -44,6 +45,7 @@ export interface Env {
 	MAILGUN_API_KEY: string;
 	MAILGUN_DOMAIN: string;
 	MAILGUN_FROM_EMAIL: string;
+	GEMINI_API_KEY: string;
 }
 
 // Context variables interface
@@ -114,6 +116,8 @@ app.use('*', secureHeaders({
 		imgSrc: ["'self'", "data:", "https://assets.terravest.homes"],
 	}
 }));
+
+app.post('/api/chat', (c) => handleChat(c.req.raw, c.env, c.executionCtx));
 
 // ==========================================
 // 🔄 PREFLIGHT HANDLER (OPTIONS Requests)

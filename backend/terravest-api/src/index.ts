@@ -8,7 +8,7 @@ import { secureHeaders } from 'hono/secure-headers';
 import * as Sentry from "@sentry/cloudflare";
 import bcrypt from "bcryptjs";
 import { rateLimiter } from "hono-rate-limiter";
-import { handleChat } from "./routes/chat";
+import { chatHandler } from "./routes/chat";
 
 // Route handlers
 import { handleRegister, handleLogin, handleMe, handleCheckUsername, handleCheckEmail, handleForgotPassword, handleResetPassword, handleVerifyEmail, handleResendVerification } from "./routes/auth";
@@ -117,7 +117,7 @@ app.use('*', secureHeaders({
 	}
 }));
 
-app.post('/api/chat', (c) => handleChat(c.req.raw, c.env, c.executionCtx));
+app.post('/api/chat', chatHandler);
 
 // ==========================================
 // 🔄 PREFLIGHT HANDLER (OPTIONS Requests)

@@ -32,6 +32,7 @@ const Contact = lazy(() => import('./pages/Contact'));
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
 const AdminWithdrawals = lazy(() => import('./pages/admin/AdminWithdrawals'));
 const Properties = lazy(() => import('./pages/admin/Properties'));
+const Users = lazy(() => import('./pages/admin/Users'));
 
 // 🌍 LANGUAGE ROUTE
 function LanguageRedirector() {
@@ -131,7 +132,8 @@ export function AppRoutes({ lang }: AppRoutesProps) {
             <Route path="admin/deposits" element={<AdminDashboard />} />
             <Route path="admin/withdrawals" element={<AdminWithdrawals />} />
             <Route path="admin/properties" element={<Properties />} />
-            <Route path="users" element={<Users />} />
+            {/* 👇 DÜZELTİLDİ: Users rotası admin yolu altına eklendi */}
+            <Route path="admin/users" element={<Users />} />
           </Route>
 
           {/* --- 404 (Not Found) --- */}

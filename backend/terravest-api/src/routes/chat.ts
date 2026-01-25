@@ -25,7 +25,7 @@ BEHAVIOR:
 - IF YOU CANNOT SOLVE THE PROBLEM: Reply exactly with "I cannot solve this specifically. Please contact support." and provide the email "support@terravest.homes".
 `;
 
-app.post('/', async (c) => {
+app.post('/api/chat', async (c) => {
     try {
         // 1. Language parametresini al
         const { message, history, language } = await c.req.json();

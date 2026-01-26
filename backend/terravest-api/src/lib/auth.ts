@@ -1,4 +1,4 @@
-import { Env } from "../index";
+import type { Env } from "../index";
 import jwt from "@tsndr/cloudflare-worker-jwt";
 import { Context, Next } from "hono";
 import { json } from "./errors";

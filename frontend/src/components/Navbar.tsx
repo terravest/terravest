@@ -164,10 +164,14 @@ export default function Navbar() {
                                                 <LayoutDashboard size={16} /> {t.navbar.dashboard}
                                             </Link>
 
-                                            {/* --- ADMIN LINK (SADECE ADMINLERE) --- */}
-                                            {isAdmin && (
-                                                <Link to={getLink('/admin/properties')} className="flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-purple-400 hover:bg-purple-500/10 hover:text-purple-300 rounded-lg transition-colors">
-                                                    <ShieldCheck size={16} /> {t.navbar.adminPanel}
+                                            {/* Admin Panel Linki */}
+                                            {user?.role === 'admin' && (
+                                                <Link
+                                                    to="/admin/dashboard"  // 👈 BURAYI DÜZELTİYORUZ (Eskiden properties idi)
+                                                    className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 flex items-center gap-2"
+                                                    onClick={() => setIsMenuOpen(false)}
+                                                >
+                                                    <LayoutDashboard size={16} /> Admin Panel
                                                 </Link>
                                             )}
 

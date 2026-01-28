@@ -2,10 +2,10 @@ import { useEffect, useState, useMemo } from 'react';
 import {
     RefreshCw, X, AlertCircle, Loader2,
     ArrowDownLeft, ArrowUpRight, Hash, Copy, Clipboard,
-    Users, Search, ArrowUp, ArrowDown // Yeni ikonlar eklendi
+    Users, Search, ArrowUp, ArrowDown
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { api } from '../../lib/api';
+import { api } from '../../lib/api'; // api.ts dosyasının yolu doğru olmalı
 import AdminNavbar from '../../components/AdminNavbar';
 import { formatCurrency, formatDate } from '../../utils/format';
 
@@ -64,7 +64,7 @@ export default function AdminDashboard() {
     const [isUserModalOpen, setIsUserModalOpen] = useState(false);
     const [loadingUsers, setLoadingUsers] = useState(false);
 
-    // FILTER & SORT STATES (YENİ EKLENDİ)
+    // FILTER & SORT STATES
     const [userSearchTerm, setUserSearchTerm] = useState("");
     const [userSortConfig, setUserSortConfig] = useState<SortConfig | null>({ key: 'id', direction: 'desc' });
 
@@ -82,12 +82,17 @@ export default function AdminDashboard() {
                 api.getAdminWithdrawals()
             ]);
 
-            if (depRes.success) setDeposits(depRes.data);
-            if (withRes.success) setWithdrawals(withRes.data);
+            // API yanıt yapısına göre (response.success veya direkt data kontrolü)
+            if (depRes && (depRes.success || Array.isArray(depRes))) {
+                setDeposits(depRes.data || depRes);
+            }
+            if (withRes && (withRes.success || Array.isArray(withRes))) {
+                setWithdrawals(withRes.data || withRes);
+            }
 
         } catch (error: any) {
             console.error("Fetch Error:", error);
-            toast.error("Failed to load data");
+            // toast.error("Failed to load data"); // İsteğe bağlı, dashboard açılışında hata mesajı boğmasın diye kapalı
         } finally {
             setLoading(false);
         }
@@ -96,13 +101,20 @@ export default function AdminDashboard() {
     const fetchUsers = async () => {
         setLoadingUsers(true);
         try {
+            // api.ts içinde getAdminUsers tanımlı olmalı!
             const response = await api.getAdminUsers();
+
             if (response.success) {
                 setUsers(response.data);
+            } else if (Array.isArray(response)) {
+                setUsers(response);
+            } else {
+                setUsers([]);
             }
         } catch (error) {
             console.error("User Fetch Error:", error);
             toast.error("Failed to load users");
+            setUsers([]);
         } finally {
             setLoadingUsers(false);
         }
@@ -117,7 +129,7 @@ export default function AdminDashboard() {
         fetchDashboardData();
     }, []);
 
-    // --- SORTING & FILTERING LOGIC (YENİ) ---
+    // --- SORTING & FILTERING LOGIC ---
     const handleUserSort = (key: keyof User) => {
         let direction: SortDirection = 'asc';
         if (userSortConfig && userSortConfig.key === key && userSortConfig.direction === 'asc') {
@@ -133,9 +145,9 @@ export default function AdminDashboard() {
         if (userSearchTerm) {
             const term = userSearchTerm.toLowerCase();
             processedData = processedData.filter(u =>
-                u.username.toLowerCase().includes(term) ||
-                u.email.toLowerCase().includes(term) ||
-                u.role.toLowerCase().includes(term)
+                (u.username || "").toLowerCase().includes(term) ||
+                (u.email || "").toLowerCase().includes(term) ||
+                (u.role || "").toLowerCase().includes(term)
             );
         }
 
@@ -144,6 +156,8 @@ export default function AdminDashboard() {
             processedData.sort((a, b) => {
                 const aValue = a[userSortConfig.key];
                 const bValue = b[userSortConfig.key];
+
+                if (aValue === undefined || bValue === undefined) return 0;
 
                 // String comparison
                 if (typeof aValue === 'string' && typeof bValue === 'string') {
@@ -398,7 +412,7 @@ export default function AdminDashboard() {
                     </div>
                 )}
 
-                {/* MODAL 3: USER MANAGEMENT LIST (UPDATED WITH SEARCH & SORT) */}
+                {/* MODAL 3: USER MANAGEMENT LIST */}
                 {isUserModalOpen && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md animate-in fade-in duration-200">
                         <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[80vh] flex flex-col relative animate-in slide-in-from-bottom-5 duration-300">
@@ -413,7 +427,7 @@ export default function AdminDashboard() {
                                     </div>
                                 </div>
 
-                                {/* SEARCH BAR (NEW) */}
+                                {/* SEARCH BAR */}
                                 <div className="relative w-full md:w-64">
                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                                     <input

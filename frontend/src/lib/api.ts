@@ -13,7 +13,7 @@ const request = async (endpoint: string, options: RequestInit = {}) => {
 
     const url = `${API_URL}${endpoint}`;
 
-    console.log(`📡 API Request: ${url}`); // Debug için
+    // console.log(`📡 API Request: ${url}`); // Debug için (İsterseniz açabilirsiniz)
 
     const response = await fetch(url, { ...options, headers });
 
@@ -52,6 +52,7 @@ export const api = {
             method: 'POST',
             body: JSON.stringify(data),
         }),
+
     // ============================
     // 🏠 MARKETPLACE & PORTFOLIO
     // ============================
@@ -93,6 +94,9 @@ export const api = {
     // ============================
     // 👑 ADMIN PANEL
     // ============================
+    // 👇 EKLENEN KISIM: Kullanıcı Listesi
+    getAdminUsers: () => request("/admin/users", { method: "GET" }),
+
     getAdminDeposits: () => request("/admin/deposits", { method: "GET" }),
     getAdminOrders: () => request("/admin/deposits", { method: "GET" }),
 

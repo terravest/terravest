@@ -4,30 +4,54 @@ const API_URL = API_BASE_URL;
 
 // --- REQUEST HELPER ---
 const request = async (endpoint: string, options: RequestInit = {}) => {
-    const token = localStorage.getItem("token");
+    // 1. Token'ı güvenli bir şekilde al (Farklı isimlerle kaydedilmiş olabilir diye kontrol ediyoruz)
+    const token = localStorage.getItem("token") || localStorage.getItem("access_token") || localStorage.getItem("authToken");
+
+    // Debug: Konsola token durumunu yaz (F12 Console sekmesinde görebilirsin)
+    // console.log(`📡 API Request: ${endpoint} | Token: ${token ? "MEVCUT ✅" : "YOK ❌"}`);
+
     const headers = {
         "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}), // Token varsa header'a ekle
         ...options.headers,
     };
 
     const url = `${API_URL}${endpoint}`;
 
-    // console.log(`📡 API Request: ${url}`); // Debug için (İsterseniz açabilirsiniz)
+    try {
+        const response = await fetch(url, { ...options, headers });
 
-    const response = await fetch(url, { ...options, headers });
+        // 2. OTOMATİK GÜVENLİK KONTROLÜ (401 UNAUTHORIZED)
+        if (response.status === 401) {
+            console.warn("⚠️ Oturum süresi dolmuş veya token geçersiz. Çıkış yapılıyor...");
+            localStorage.removeItem("token");
+            localStorage.removeItem("user");
+            // Kullanıcıyı login sayfasına at
+            if (window.location.pathname !== '/login') {
+                window.location.href = "/login";
+            }
+            throw new Error("Unauthorized: Lütfen tekrar giriş yapın.");
+        }
 
-    // Handle non-JSON responses (204 No Content, etc.)
-    const contentType = response.headers.get("content-type");
-    let data = {};
-    if (contentType && contentType.includes("application/json")) {
-        data = await response.json();
+        // JSON yanıtı işle
+        const contentType = response.headers.get("content-type");
+        let data: any = {};
+
+        if (contentType && contentType.includes("application/json")) {
+            data = await response.json();
+        }
+
+        if (!response.ok) {
+            throw new Error(data.error || data.message || `API Error: ${response.status}`);
+        }
+
+        return data;
+
+    } catch (error: any) {
+        // Eğer fetch işlemi hiç yapılamadıysa (Network Error)
+        console.error(`🔥 API Request Failed (${endpoint}):`, error.message);
+        throw error;
     }
-
-    if (!response.ok) {
-        throw new Error((data as any).error || (data as any).message || "API Request Failed");
-    }
-    return data;
 };
 
 // --- API METHODS ---
@@ -94,9 +118,7 @@ export const api = {
     // ============================
     // 👑 ADMIN PANEL
     // ============================
-    // 👇 EKLENEN KISIM: Kullanıcı Listesi
     getAdminUsers: () => request("/admin/users", { method: "GET" }),
-
     getAdminDeposits: () => request("/admin/deposits", { method: "GET" }),
     getAdminOrders: () => request("/admin/deposits", { method: "GET" }),
 

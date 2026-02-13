@@ -22,6 +22,8 @@ export default function Register() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    // 👇 YENİ: Sözleşme onayı state'i
+    const [agreedToTerms, setAgreedToTerms] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
     const [passChecks, setPassChecks] = useState({
@@ -49,14 +51,27 @@ export default function Register() {
         setIsLoading(true);
         toast.dismiss();
 
+        // 1. Şifre Eşleşme Kontrolü
         if (password !== confirmPassword) {
             toast.error(t.auth.toastRegisterMismatch);
             setIsLoading(false);
             return;
         }
 
+        // 2. Şifre Güçlülük Kontrolü
         if (!Object.values(passChecks).every(Boolean)) {
             toast.error(t.auth.toastRegisterRequirements);
+            setIsLoading(false);
+            return;
+        }
+
+        // 3. 👇 YENİ: Sözleşme Onay Kontrolü
+        if (!agreedToTerms) {
+            toast.error(lang === 'pt-br'
+                ? "Você deve concordar com os Termos e a Política de Privacidade."
+                : lang === 'es'
+                    ? "Debe aceptar los Términos y la Política de Privacidad."
+                    : "You must agree to the Terms of Service and Privacy Policy.");
             setIsLoading(false);
             return;
         }
@@ -96,7 +111,6 @@ export default function Register() {
                 <div className="w-full max-w-md p-8 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl shadow-2xl">
 
                     <div className="text-center mb-6">
-                        {/* LOGO EKLENDİ */}
                         <img
                             src="/logo.svg"
                             alt="TerraVest"
@@ -176,6 +190,30 @@ export default function Register() {
                             )}
                         </div>
 
+                        {/* 👇 YENİ: Sözleşme Onay Kutusu */}
+                        <div className="flex items-start gap-3 bg-black/10 p-3 rounded-lg border border-white/5">
+                            <div className="flex items-center h-5">
+                                <input
+                                    id="terms"
+                                    type="checkbox"
+                                    checked={agreedToTerms}
+                                    onChange={(e) => setAgreedToTerms(e.target.checked)}
+                                    className="w-4 h-4 rounded border-gray-300 bg-white/10 text-[#00E5FF] focus:ring-[#00E5FF] focus:ring-offset-0 cursor-pointer accent-[#00E5FF]"
+                                />
+                            </div>
+                            <label htmlFor="terms" className="text-xs text-gray-300 cursor-pointer select-none leading-relaxed">
+                                {lang === 'pt-br' ? 'Eu concordo com os ' : lang === 'es' ? 'Acepto los ' : 'I agree to the '}
+                                <Link to={getLink('/terms-of-service')} target="_blank" className="text-[#00E5FF] hover:text-white underline font-medium">
+                                    {lang === 'pt-br' ? 'Termos de Serviço' : lang === 'es' ? 'Términos de Servicio' : 'Terms of Service'}
+                                </Link>
+                                {lang === 'pt-br' ? ' e a ' : lang === 'es' ? ' y la ' : ' and '}
+                                <Link to={getLink('/privacy-policy')} target="_blank" className="text-[#00E5FF] hover:text-white underline font-medium">
+                                    {lang === 'pt-br' ? 'Política de Privacidade' : lang === 'es' ? 'Política de Privacidad' : 'Privacy Policy'}
+                                </Link>
+                                .
+                            </label>
+                        </div>
+
                         <button
                             type="submit"
                             disabled={isLoading}
@@ -188,11 +226,6 @@ export default function Register() {
                             ) : t.auth.registerButton}
                         </button>
                     </form>
-
-                    <p className="mt-4 text-[11px] text-gray-300 text-center leading-relaxed">
-                        {t.auth.registerTerms}
-                        <Link to={getLink('/learn')} className="underline hover:text-white ml-1">{t.auth.registerTermsLink}</Link>
-                    </p>
 
                     <div className="mt-6 text-center">
                         <p className="text-xs text-gray-300 mb-2">{t.auth.registerTrustedBy}</p>
